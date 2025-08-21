@@ -1,0 +1,29 @@
+{
+  "name": "user-management-system",
+  "version": "1.0.0",
+  "description": "Full-stack user management system with Vue 3 SPA and Vercel serverless functions",
+  "private": true,
+  "workspaces": [
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=web",
+    "build": "npm run build --workspace=web",
+    "build:api": "npm run build --workspace=api",
+    "db:migrate": "npm run db:migrate --workspace=api",
+    "db:generate": "npm run db:generate --workspace=api",
+    "db:studio": "npm run db:studio --workspace=api"
+  },
+  "keywords": [
+    "user-management",
+    "vue3",
+    "vercel",
+    "serverless",
+    "postgresql",
+    "prisma",
+    "jwt-auth"
+  ],
+  "author": "Development Team",
+  "license": "MIT"
+}
