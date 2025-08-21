@@ -40,7 +40,7 @@ export function signAccessToken(payload: JWTPayload): string {
     expiresIn: JWT_ACCESS_EXPIRES_IN,
     audience: 'user-management-api',
     issuer: 'user-management-system'
-  });
+  } as jwt.SignOptions);
 }
 
 export function signRefreshToken(payload: { userId: number }): string {
@@ -48,7 +48,7 @@ export function signRefreshToken(payload: { userId: number }): string {
     expiresIn: JWT_REFRESH_EXPIRES_IN,
     audience: 'user-management-refresh',
     issuer: 'user-management-system'
-  });
+  } as jwt.SignOptions);
 }
 
 export function verifyAccessToken(token: string): JWTPayload {

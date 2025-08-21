@@ -177,7 +177,7 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
   } catch (error) {
     console.error('Update user error:', error);
     
-    if (error.code === 'P2002') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
     

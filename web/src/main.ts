@@ -3,11 +3,6 @@ import { createPinia } from 'pinia';
 import { createRouter, createWebHistory } from 'vue-router';
 import naive from 'naive-ui';
 
-// Import styles
-import 'naive-ui/es/message/style/css';
-import 'naive-ui/es/dialog/style/css';
-import 'naive-ui/es/notification/style/css';
-
 import App from './App.vue';
 import Login from './views/Login.vue';
 import Dashboard from './views/Dashboard.vue';

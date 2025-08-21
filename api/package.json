@@ -9,6 +9,8 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
+    "db:push": "prisma db push",
+    "db:seed": "tsx scripts/seed.ts",
     "dev": "vercel dev --listen 3001"
   },
   "dependencies": {
@@ -22,6 +24,7 @@
     "typescript": "^5.3.3"
   },
   "devDependencies": {
-    "@vercel/node": "^3.0.12"
+    "@vercel/node": "^3.0.12",
+    "tsx": "^4.7.0"
   }
 }
