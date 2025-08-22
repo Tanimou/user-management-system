@@ -4,15 +4,16 @@ import type { AuthenticatedRequest } from '../../lib/auth';
 
 export function createMockRequest(
   method: string,
-  cookies: Record<string, string> = {},
-  additional: Partial<AuthenticatedRequest> = {}
+  queryOrCookies: Record<string, string> = {},
+  additional: Partial<AuthenticatedRequest> = {},
+  cookies?: Record<string, string>
 ): AuthenticatedRequest {
   return {
     method,
-    query: {},
+    query: cookies ? {} : queryOrCookies,
     headers: {},
     body: additional.body || {},
-    cookies,
+    cookies: cookies || (method === 'POST' ? queryOrCookies : {}),
     ...additional
   } as AuthenticatedRequest;
 }
