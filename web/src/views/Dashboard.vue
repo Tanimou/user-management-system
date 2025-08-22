@@ -401,21 +401,17 @@ function initializeFromURL() {
     filters.role = query.role as string;
   }
   
-  if (query.orderBy) {
-    sorting.sortBy = query.orderBy as string;
-  }
-  
-  if (query.order) {
-    sorting.sortOrder = query.order as 'asc' | 'desc';
-  }
-  
-  if (query.page) {
-    pagination.page = parseInt(query.page as string) || 1;
-  }
-  
-  if (query.size) {
-    pagination.pageSize = parseInt(query.size as string) || 10;
-  }
+if (query.orderBy) {
+  paginationState.setSorting(query.orderBy as string, (query.order as 'asc' | 'desc') || 'asc');
+}  
+
+if (query.page) {
+  paginationState.setPage(parseInt(query.page as string) || 1);
+}
+
+if (query.size) {
+  paginationState.setSize(parseInt(query.size as string) || 10);
+}
 
   // Handle date filters (from timestamp to Date object)
   if (query.createdFrom) {
@@ -434,28 +430,28 @@ function clearFilters() {
   filters.role = '';
   filters.createdFrom = null;
   filters.createdTo = null;
-  pagination.page = 1;
+  paginationState.setPage(1);
   loadUsers();
 }
 
 // Watch filters
 watch(() => filters.active, () => {
-  pagination.page = 1;
+  paginationState.setPage(1);
   loadUsers();
 });
 
 watch(() => filters.role, () => {
-  pagination.page = 1;
+  paginationState.setPage(1);
   loadUsers();
 });
 
 watch(() => filters.createdFrom, () => {
-  pagination.page = 1;
+  paginationState.setPage(1);
   loadUsers();
 });
 
 watch(() => filters.createdTo, () => {
-  pagination.page = 1;
+  paginationState.setPage(1);
   loadUsers();
 });
 
