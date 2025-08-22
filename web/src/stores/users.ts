@@ -46,10 +46,13 @@ export const useUsersStore = defineStore('users', () => {
 
   // Actions
   async function loadUsers() {
+    console.log('🔍 loadUsers called');
     loading.value = true;
     try {
       // Demo mode - return mock data if no real API
       const token = localStorage.getItem('accessToken');
+      console.log('🔑 Token check:', { token: token?.substring(0, 20) + '...', isDemo: token === 'admin-token' || token === 'demo-token' });
+      
       if (token === 'admin-token' || token === 'demo-token') {
         await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
         
@@ -144,6 +147,7 @@ export const useUsersStore = defineStore('users', () => {
         return;
       }
 
+      console.log('🌐 Making real API call to /users');
       const params: any = {
         page: pagination.value.page,
         size: pagination.value.size,
@@ -162,10 +166,34 @@ export const useUsersStore = defineStore('users', () => {
         params.active = filters.value.status === 'active';
       }
 
+      console.log('📡 API params:', params);
       const response = await apiClient.get('/users', { params });
-      const responseData = response.data as any; // Type assertion
+      console.log('📥 Raw API response:', response);
+      console.log('📥 API response.data:', response.data);
       
-      users.value = responseData.data || responseData.items || [];
+      const responseData = response.data as any; // Type assertion
+      console.log('📊 Parsed responseData:', responseData);
+      console.log('📊 responseData.data:', responseData.data);
+      console.log('📊 responseData.items:', responseData.items);
+      console.log('📊 Array.isArray(responseData):', Array.isArray(responseData));
+      console.log('📊 Array.isArray(responseData.data):', Array.isArray(responseData.data));
+      
+      // Handle both possible response formats
+      let usersArray: any[] = [];
+      if (Array.isArray(responseData.data)) {
+        usersArray = responseData.data;
+      } else if (Array.isArray(responseData.items)) {
+        usersArray = responseData.items;
+      } else if (Array.isArray(responseData)) {
+        usersArray = responseData;
+      } else {
+        console.error('❌ Unexpected response format:', responseData);
+        usersArray = [];
+      }
+      
+      users.value = usersArray;
+      console.log('👥 Users set to:', users.value.length, 'items');
+      console.log('👥 First user:', users.value[0]);
       
       if (responseData.pagination) {
         pagination.value = {

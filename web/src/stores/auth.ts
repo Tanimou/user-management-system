@@ -87,8 +87,10 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const response = await apiClient.post('/login', { email, password });
-      const responseData = response.data as any; // Type assertion
-      const { user: userData, token: accessToken } = responseData; // Updated to match API spec
+      console.log('Login API response:', response);
+      
+      // The login API returns { token, user } directly, not in ApiResponse format
+      const { token: accessToken, user: userData } = response as any;
 
       // Store token based on remember me preference
       if (rememberMe) {
