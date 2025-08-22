@@ -216,7 +216,10 @@ const route = useRoute();
 const message = useMessage();
 const dialog = useDialog();
 const authStore = useAuthStore();
-
+const sorting = reactive({
+  sortBy: 'createdAt',
+  sortOrder: 'desc'
+});
 // Computed
 const activeFiltersCount = computed(() => {
   let count = 0;
