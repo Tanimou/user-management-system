@@ -1,4 +1,5 @@
 <template>
+
   <div v-if="password" class="password-strength">
     <div class="strength-bar">
       <div 
@@ -122,6 +123,7 @@ const strengthClass = computed(() => `strength-${strengthLevel.value}`);
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 8px;
+
 }
 
 .strength-fill {
@@ -231,6 +233,7 @@ const strengthClass = computed(() => `strength-${strengthLevel.value}`);
   
   .requirements-list li {
     font-size: 11px;
+
   }
 }
 </style>
