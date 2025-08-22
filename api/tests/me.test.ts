@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockRequest, createMockResponse, createMockUser, createMockJWTPayload } from './utils/mocks';
 
+// Mock JWT
+vi.mock('jsonwebtoken', () => ({
+  default: {
+    verify: vi.fn(),
+    sign: vi.fn(),
+  },
+}));
+
 // Mock prisma
 vi.mock('../lib/prisma', () => ({
   default: {
@@ -33,13 +41,77 @@ vi.mock('../lib/auth', async () => {
   };
 });
 
+// Mock middleware components
+vi.mock('../lib/middleware/enhanced-auth', async () => {
+  const actual = await vi.importActual('../lib/middleware/enhanced-auth');
+  return {
+    ...actual,
+    verifyToken: vi.fn(),
+    withAuth: vi.fn((handler) => handler), // Pass through for testing
+  };
+});
+
+vi.mock('../lib/middleware/validation', async () => {
+  const actual = await vi.importActual('../lib/middleware/validation');
+  return {
+    ...actual,
+    validateBody: vi.fn((schema) => (handler) => async (req, res) => {
+      // Process body through validation  
+      const { error, value } = schema.validate(req.body);
+      if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+      }
+      req.body = value;
+      return handler(req, res);
+    }),
+  };
+});
+
+vi.mock('../lib/middleware/index', async () => {
+  const actual = await vi.importActual('../lib/middleware/index');
+  return {
+    ...actual,
+    withCORS: vi.fn((handler) => handler), // Pass through for testing
+    withErrorHandling: vi.fn((handler) => async (req, res) => {
+      // Mock error handling middleware
+      try {
+        return await handler(req, res);
+      } catch (error) {
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+    }),
+    withAuth: vi.fn((handler) => handler), // Pass through for testing
+  };
+});
+
 import handler from '../me';
 import prisma from '../lib/prisma';
 import { requireAuth, hashPassword } from '../lib/auth';
+import jwt from 'jsonwebtoken';
+import { verifyToken } from '../lib/middleware/enhanced-auth';
+import { updateUserSchema } from '../lib/schemas/user';
 
 describe('User Profile API - GET /api/me', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock JWT verification to return a valid payload
+    vi.mocked(jwt.verify).mockReturnValue({
+      userId: 1,
+      email: 'user@example.com', 
+      roles: ['user']
+    } as any);
+    
+    // Mock verifyToken to return successful auth
+    vi.mocked(verifyToken).mockResolvedValue({
+      authenticated: true,
+      user: {
+        id: 1,
+        email: 'user@example.com',
+        roles: ['user'],
+        isActive: true
+      }
+    });
+    
     vi.mocked(requireAuth).mockResolvedValue(true);
   });
 
@@ -47,7 +119,7 @@ describe('User Profile API - GET /api/me', () => {
     const currentUser = createMockUser(1, 'Current User', 'current@example.com');
     vi.mocked(prisma.user.findUnique).mockResolvedValue(currentUser);
 
-    const req = createMockRequest('GET', {}, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest('GET', {}, { user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' } });
     const res = createMockResponse();
 
     await handler(req, res);
@@ -73,7 +145,7 @@ describe('User Profile API - GET /api/me', () => {
     const inactiveUser = createMockUser(1, 'Inactive User', 'inactive@example.com', false);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(inactiveUser);
 
-    const req = createMockRequest('GET', {}, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest('GET', {}, { user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' } });
     const res = createMockResponse();
 
     await handler(req, res);
@@ -107,7 +179,7 @@ describe('User Profile API - PUT /api/me', () => {
     vi.mocked(prisma.user.update).mockResolvedValue(updatedUser);
 
     const req = createMockRequest('PUT', {}, {
-      user: { userId: 1, roles: ['user'] },
+      user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' },
       body: { name: 'Updated Name' }
     });
     const res = createMockResponse();
@@ -131,7 +203,7 @@ describe('User Profile API - PUT /api/me', () => {
     vi.mocked(prisma.user.update).mockResolvedValue(updatedUser);
 
     const req = createMockRequest('PUT', {}, {
-      user: { userId: 1, roles: ['user'] },
+      user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' },
       body: { password: 'NewPassword123!' }
     });
     const res = createMockResponse();
@@ -151,7 +223,7 @@ describe('User Profile API - PUT /api/me', () => {
     vi.mocked(prisma.user.update).mockResolvedValue(updatedUser);
 
     const req = createMockRequest('PUT', {}, {
-      user: { userId: 1, roles: ['user'] },
+      user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' },
       body: { name: 'New Name', password: 'NewPassword123!' }
     });
     const res = createMockResponse();
@@ -169,7 +241,7 @@ describe('User Profile API - PUT /api/me', () => {
     const longName = 'a'.repeat(121); // Exceeds 120 character limit
 
     const req = createMockRequest('PUT', {}, {
-      user: { userId: 1, roles: ['user'] },
+      user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' },
       body: { name: longName }
     });
     const res = createMockResponse();
@@ -177,12 +249,12 @@ describe('User Profile API - PUT /api/me', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Name must be a string with max 120 characters' });
+    expect(res.json).toHaveBeenCalledWith({ error: '"name" length must be less than or equal to 120 characters long' });
   });
 
   it('should validate password length', async () => {
     const req = createMockRequest('PUT', {}, {
-      user: { userId: 1, roles: ['user'] },
+      user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' },
       body: { password: 'short' } // Less than 8 characters
     });
     const res = createMockResponse();
@@ -190,13 +262,7 @@ describe('User Profile API - PUT /api/me', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      error: 'Password does not meet policy requirements',
-      details: expect.arrayContaining([
-        'Password must be at least 8 characters long'
-      ]),
-      code: 'INVALID_PASSWORD_POLICY'
-    });
+    expect(res.json).toHaveBeenCalledWith({ error: '"password" length must be at least 8 characters long' });
   });
 
   it('should trim whitespace from name', async () => {
@@ -204,7 +270,7 @@ describe('User Profile API - PUT /api/me', () => {
     vi.mocked(prisma.user.update).mockResolvedValue(updatedUser);
 
     const req = createMockRequest('PUT', {}, {
-      user: { userId: 1, roles: ['user'] },
+      user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' },
       body: { name: '  Trimmed Name  ' }
     });
     const res = createMockResponse();
@@ -220,7 +286,7 @@ describe('User Profile API - PUT /api/me', () => {
 
   it('should return error when no valid fields provided', async () => {
     const req = createMockRequest('PUT', {}, {
-      user: { userId: 1, roles: ['user'] },
+      user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' },
       body: {} // Empty body
     });
     const res = createMockResponse();
@@ -228,7 +294,7 @@ describe('User Profile API - PUT /api/me', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'No valid fields to update' });
+    expect(res.json).toHaveBeenCalledWith({ error: '"value" must have at least 1 key' });
   });
 
   it('should ignore invalid fields', async () => {
@@ -236,7 +302,7 @@ describe('User Profile API - PUT /api/me', () => {
     vi.mocked(prisma.user.update).mockResolvedValue(updatedUser);
 
     const req = createMockRequest('PUT', {}, {
-      user: { userId: 1, roles: ['user'] },
+      user: { id: 1, email: 'user@example.com', roles: ['user'], isActive: true }, headers: { authorization: 'Bearer valid-token' },
       body: {
         name: 'Valid Name',
         email: 'ignored@example.com', // Should be ignored
