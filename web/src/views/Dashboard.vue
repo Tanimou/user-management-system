@@ -400,11 +400,11 @@ function initializeFromURL() {
 
   // Handle date filters (from timestamp to Date object)
   if (query.createdFrom) {
-    filters.createdFrom = new Date(query.createdFrom as string).getTime();
+    filters.createdFrom = new Date(query.createdFrom as string).toISOString();
   }
-  
+
   if (query.createdTo) {
-    filters.createdTo = new Date(query.createdTo as string).getTime();
+    filters.createdTo = new Date(query.createdTo as string).toISOString();
   }
 }
 
