@@ -1,0 +1,808 @@
+openapi: 3.0.3
+info:
+  title: User Management API
+  description: REST API for user management with authentication and role-based access control
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://user-management.vercel.app/api
+    description: Production server
+
+paths:
+  /login:
+    post:
+      summary: Authenticate user
+      description: Login with email and password to receive access token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                  description: User email address (case insensitive)
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: MyPassword123!
+                  description: User password
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: Refresh token (httpOnly)
+              schema:
+                type: string
+                example: refreshToken=abc123; HttpOnly; Secure; SameSite=Strict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT access token (expires in 15 minutes)
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  user:
+                    $ref: '#/components/schemas/PublicUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /refresh:
+    post:
+      summary: Refresh access token
+      description: Use refresh token cookie to get new access token
+      tags: [Authentication]
+      security:
+        - refreshCookie: []
+      responses:
+        '200':
+          description: Token refreshed successfully
+          headers:
+            Set-Cookie:
+              description: New refresh token (httpOnly, rotated)
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: New JWT access token
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /me:
+    get:
+      summary: Get current user profile
+      description: Get authenticated user's own profile information
+      tags: [User Profile]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update current user profile
+      description: Update authenticated user's own profile (name, password only)
+      tags: [User Profile]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                  example: John Doe
+                  description: Updated user name
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: NewSecurePassword123!
+                  description: New password (optional)
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Profile updated successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users:
+    get:
+      summary: List users
+      description: Get paginated list of users with filtering, searching, and sorting
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (starts at 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: size
+          in: query
+          description: Items per page (max 50)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+            example: 10
+        - name: search
+          in: query
+          description: Search in name and email (case insensitive)
+          schema:
+            type: string
+            example: john
+        - name: role
+          in: query
+          description: Filter by role
+          schema:
+            type: string
+            enum: [user, admin]
+            example: admin
+        - name: active
+          in: query
+          description: Filter by active status
+          schema:
+            type: boolean
+            example: true
+        - name: sort
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [name, email, createdAt]
+            default: createdAt
+            example: name
+        - name: dir
+          in: query
+          description: Sort direction
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+            example: asc
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsers'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Create user
+      description: Create a new user (admin only)
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 123
+                    description: ID of the newly created user
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /users/{id}:
+    get:
+      summary: Get user by ID
+      description: Get a specific user by their ID
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            example: 123
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update user
+      description: Update a user (admin only, or user updating themselves with restrictions)
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User updated successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Soft delete user
+      description: Soft delete a user by setting isActive to false (admin only)
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            example: 123
+      responses:
+        '200':
+          description: User deactivated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User deactivated successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/deactivated:
+    get:
+      summary: List deactivated users
+      description: Get list of deactivated users (admin only)
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (starts at 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: size
+          in: query
+          description: Items per page (max 50)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Deactivated users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsers'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /roles:
+    get:
+      summary: List available roles
+      description: Get list of available user roles
+      tags: [Role Management]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Roles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                    example: ["user", "admin"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /health:
+    get:
+      summary: Health check
+      description: Get system health status and metrics
+      tags: [System]
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: 2023-01-01T12:00:00.000Z
+                  version:
+                    type: string
+                    example: 1.0.0
+                  environment:
+                    type: string
+                    example: production
+                  uptime:
+                    type: number
+                    example: 3600
+                    description: Process uptime in seconds
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: connected
+                      memory:
+                        type: object
+                        properties:
+                          used:
+                            type: number
+                            example: 50
+                            description: Memory usage in MB
+                          total:
+                            type: number
+                            example: 128
+                            description: Total memory in MB
+        '500':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: unhealthy
+                  error:
+                    type: string
+                    example: Database connection failed
+
+  /validate-password:
+    post:
+      summary: Validate password
+      description: Validate password against policy requirements
+      tags: [Validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  example: MyPassword123!
+      responses:
+        '200':
+          description: Password validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                    example: []
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token for API authentication
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+      description: HTTP-only refresh token cookie
+
+  schemas:
+    PublicUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+          description: Unique user identifier
+        name:
+          type: string
+          example: John Doe
+          description: User full name
+        email:
+          type: string
+          format: email
+          example: john@example.com
+          description: User email address (lowercase)
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["user", "admin"]
+          description: Array of user roles for RBAC
+        isActive:
+          type: boolean
+          example: true
+          description: Whether the user account is active
+        createdAt:
+          type: string
+          format: date-time
+          example: 2023-01-01T12:00:00.000Z
+          description: Account creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2023-01-02T12:00:00.000Z
+          description: Last account update timestamp
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/avatars/123.jpg
+          description: URL to user avatar image
+
+    CreateUserRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          example: John Doe
+          description: User full name
+        email:
+          type: string
+          format: email
+          maxLength: 180
+          example: john@example.com
+          description: User email address (will be stored lowercase)
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: SecurePassword123!
+          description: User password (optional, will be generated if not provided)
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [user, admin]
+          default: ["user"]
+          example: ["user"]
+          description: Array of user roles
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          example: John Doe
+          description: Updated user name
+        email:
+          type: string
+          format: email
+          maxLength: 180
+          example: john@example.com
+          description: Updated email address
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: NewPassword123!
+          description: New password
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [user, admin]
+          example: ["user", "admin"]
+          description: Updated user roles (admin only)
+        isActive:
+          type: boolean
+          example: true
+          description: Account status (admin only)
+
+    PaginatedUsers:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicUser'
+        page:
+          type: integer
+          example: 1
+          description: Current page number
+        size:
+          type: integer
+          example: 10
+          description: Items per page
+        total:
+          type: integer
+          example: 100
+          description: Total number of items
+        totalPages:
+          type: integer
+          example: 10
+          description: Total number of pages
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error category
+          example: ValidationError
+        message:
+          type: string
+          description: Human-readable error message
+          example: Email is required
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request data or validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            validation:
+              summary: Validation error
+              value:
+                error: ValidationError
+                message: Email is required
+                details:
+                  field: email
+                  code: required
+            invalid_format:
+              summary: Invalid format
+              value:
+                error: ValidationError
+                message: Invalid email format
+                details:
+                  field: email
+                  code: format
+
+    Unauthorized:
+      description: Authentication required or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            missing_token:
+              summary: Missing token
+              value:
+                error: AuthenticationError
+                message: Access token required
+            invalid_token:
+              summary: Invalid token
+              value:
+                error: AuthenticationError
+                message: Invalid or expired token
+            expired_token:
+              summary: Expired token
+              value:
+                error: AuthenticationError
+                message: Token has expired
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            insufficient_role:
+              summary: Insufficient role
+              value:
+                error: AuthorizationError
+                message: Admin role required for this operation
+            self_modification:
+              summary: Self-modification denied
+              value:
+                error: AuthorizationError
+                message: Cannot modify your own admin role
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            user_not_found:
+              summary: User not found
+              value:
+                error: NotFoundError
+                message: User not found
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            duplicate_email:
+              summary: Duplicate email
+              value:
+                error: ConflictError
+                message: User with this email already exists
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          description: Seconds until reset
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            login_rate_limit:
+              summary: Login rate limit exceeded
+              value:
+                error: RateLimitError
+                message: Too many login attempts. Try again in 60 seconds.
+            general_rate_limit:
+              summary: General rate limit exceeded
+              value:
+                error: RateLimitError
+                message: Request rate limit exceeded. Please slow down.
+
+tags:
+  - name: Authentication
+    description: User authentication and token management
+  - name: User Profile
+    description: Current user profile management
+  - name: User Management
+    description: User CRUD operations and administration
+  - name: Role Management
+    description: Role and permission management
+  - name: System
+    description: System health and status endpoints
+  - name: Validation
+    description: Input validation utilities

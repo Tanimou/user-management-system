@@ -8,10 +8,45 @@
   "endOfLine": "lf",
   "arrowParens": "avoid",
   "bracketSpacing": true,
+  "bracketSameLine": false,
   "insertPragma": false,
   "proseWrap": "preserve",
   "quoteProps": "as-needed",
   "requirePragma": false,
   "htmlWhitespaceSensitivity": "css",
-  "vueIndentScriptAndStyle": false
+  "vueIndentScriptAndStyle": false,
+  "overrides": [
+    {
+      "files": "*.json",
+      "options": {
+        "parser": "json",
+        "printWidth": 80
+      }
+    },
+    {
+      "files": "*.md",
+      "options": {
+        "parser": "markdown",
+        "printWidth": 80,
+        "proseWrap": "always",
+        "tabWidth": 2
+      }
+    },
+    {
+      "files": "*.yml",
+      "options": {
+        "parser": "yaml",
+        "tabWidth": 2,
+        "printWidth": 80
+      }
+    },
+    {
+      "files": "*.yaml",
+      "options": {
+        "parser": "yaml",
+        "tabWidth": 2,
+        "printWidth": 80
+      }
+    }
+  ]
 }
