@@ -11,6 +11,7 @@ import prisma from '../lib/prisma.js';
 import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
 import { validateRoles } from '../lib/role-validation.js';
 import { logUserCreation } from '../lib/audit-logger.js';
+import { getValidatedSorting } from '../lib/sorting.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -112,11 +113,7 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     const skip = (pageNum - 1) * pageSize;
 
     // Handle sorting
-    const validOrderBy = ['name', 'email', 'createdAt', 'updatedAt'];
-    const validOrder = ['asc', 'desc'];
-
-    const sortField = validOrderBy.includes(orderBy as string) ? (orderBy as string) : 'createdAt';
-    const sortOrder = validOrder.includes(order as string) ? (order as string) : 'desc';
+    const { sortField, sortOrder } = getValidatedSorting(orderBy, order);
 
     // Execute user query (total count already retrieved above)
     const users = await prisma.user.findMany({

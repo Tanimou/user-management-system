@@ -166,6 +166,7 @@ import UserProfile from '@/components/UserProfile.vue';
 import UserTable from '@/components/UserTable.vue';
 import PaginationControls from '@/components/PaginationControls.vue';
 import { usePaginationState } from '@/composables/usePaginationState';
+import { fromNaiveSortOrder } from '@/utils/sorting';
 import apiClient from '@/api/axios';
 
 const router = useRouter();
@@ -315,7 +316,7 @@ function handleSorterChange(sorterInfo: any) {
   
   const { columnKey, order } = sorterInfo;
   const sortBy = columnKey;
-  const sortOrder = order === 'ascend' ? 'asc' : 'desc';
+  const sortOrder = fromNaiveSortOrder(order);
   
   paginationState.setSorting(sortBy, sortOrder);
   loadUsers();

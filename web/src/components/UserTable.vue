@@ -19,6 +19,7 @@ import {
   Trash as DeleteIcon
 } from '@vicons/ionicons5';
 import { useAuthStore, type User } from '@/stores/auth';
+import { getColumnSortOrder } from '@/utils/sorting';
 
 interface Props {
   users: User[];
@@ -50,13 +51,13 @@ const columns: DataTableColumns<User> = [
     title: 'Name', 
     key: 'name',
     sorter: true,
-    sortOrder: props.sorting.sortBy === 'name' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : false
+    sortOrder: getColumnSortOrder('name', props.sorting.sortBy, props.sorting.sortOrder)
   },
   { 
     title: 'Email', 
     key: 'email',
     sorter: true,
-    sortOrder: props.sorting.sortBy === 'email' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : false
+    sortOrder: getColumnSortOrder('email', props.sorting.sortBy, props.sorting.sortOrder)
   },
   {
     title: 'Roles',
@@ -76,14 +77,14 @@ const columns: DataTableColumns<User> = [
     title: 'Created',
     key: 'createdAt',
     sorter: true,
-    sortOrder: props.sorting.sortBy === 'createdAt' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : false,
+    sortOrder: getColumnSortOrder('createdAt', props.sorting.sortBy, props.sorting.sortOrder),
     render: (row) => new Date(row.createdAt).toLocaleDateString(),
   },
   {
     title: 'Updated',
     key: 'updatedAt',
     sorter: true,
-    sortOrder: props.sorting.sortBy === 'updatedAt' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : false,
+    sortOrder: getColumnSortOrder('updatedAt', props.sorting.sortBy, props.sorting.sortOrder),
     render: (row) => row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'Never',
   },
   {
