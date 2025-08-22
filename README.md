@@ -105,19 +105,35 @@ node api/scripts/seed.js
 
 ### 4. Development
 
-Start both frontend and backend:
+For local development, you have several options:
 
+**Option A: Full-stack development (recommended)**
 ```bash
-# Terminal 1: Start backend (API)
-npm run dev --workspace=api
+# Terminal 1: Start Vercel development server (serves both API and frontend)
+npm run dev:api
 
-# Terminal 2: Start frontend
+# Terminal 2: Start frontend development (for hot reload)
+npm run dev:frontend
+```
+
+**Option B: Frontend-only development**
+```bash
+# Start frontend development server
 npm run dev --workspace=web
+# or
+npm run dev:frontend
+```
+
+**Option C: API TypeScript watching**
+```bash
+# Watch API TypeScript files for type checking
+npm run dev --workspace=api
 ```
 
 The application will be available at:
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:3001
+- Backend API: http://localhost:3001 (when using Vercel dev)
+- Vercel Dev Server: Uses the port specified in vercel.json or default Vercel port
 
 ### 5. Production Deployment
 

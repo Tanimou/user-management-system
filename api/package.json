@@ -11,7 +11,7 @@
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
     "db:seed": "tsx scripts/seed.ts",
-    "dev": "vercel dev --listen 3001"
+    "dev": "tsc --noEmit --watch"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
