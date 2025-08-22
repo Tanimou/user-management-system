@@ -55,7 +55,7 @@ async function main() {
     const userPassword = await argon2.hash('password123', argon2Config);
 
     // Create regular user
-    const user = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { email: 'user@example.com' },
       update: {},
       create: {
