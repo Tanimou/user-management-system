@@ -296,12 +296,13 @@ async function loadUsers() {
     }
 
     const response = await apiClient.get(endpoint, { params });
+    const responseData = response.data as any; // Type assertion
 
-    users.value = response.data.data;
-    total.value = response.data.pagination.total;
-    totalPages.value = response.data.pagination.totalPages;
-    startItem.value = response.data.pagination.startItem || 0;
-    endItem.value = response.data.pagination.endItem || 0;
+    users.value = responseData.data;
+    total.value = responseData.pagination.total;
+    totalPages.value = responseData.pagination.totalPages;
+    startItem.value = responseData.pagination.startItem || 0;
+    endItem.value = responseData.pagination.endItem || 0;
   } catch (error: any) {
     message.error(error.response?.data?.error || 'Failed to load users');
   } finally {
