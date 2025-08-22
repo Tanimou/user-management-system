@@ -198,7 +198,7 @@ const total = ref(0);
 const totalPages = ref(1);
 const startItem = ref(0);
 const endItem = ref(0);
-
+const paginationState = usePaginationState();
 // Legacy filters - sync with pagination state
 const filters = reactive({
   search: '',
@@ -251,10 +251,10 @@ async function loadUsers() {
   loading.value = true;
   try {
     const params: any = {
-      page: pagination.page,
-      size: pagination.pageSize,
-      orderBy: sorting.sortBy,
-      order: sorting.sortOrder,
+      page: paginationState.page.value,
+size: paginationState.size.value,
+orderBy: paginationState.sortBy.value,
+order: paginationState.sortOrder.value,
     };
 
     if (filters.search) {
