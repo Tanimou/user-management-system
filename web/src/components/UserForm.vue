@@ -65,11 +65,25 @@
       </n-space>
     </div>
   </n-form>
+
+  <!-- Role Confirmation Modal -->
+  <RoleConfirmationModal
+    :show="showConfirmation"
+    :title="confirmationConfig.title"
+    :message="confirmationConfig.message"
+    :details="confirmationConfig.details"
+    :role-changes="confirmationConfig.roleChanges"
+    :confirmation-type="confirmationConfig.type"
+    :loading="loading"
+    @confirm="handleConfirmationAccept"
+    @cancel="handleConfirmationCancel"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
 import { useAuthStore, type User } from '@/stores/auth';
+import RoleConfirmationModal from './RoleConfirmationModal.vue';
 
 interface Props {
   user?: User | null;
@@ -139,6 +153,17 @@ const roleOptions = [
 // State
 const loading = ref(false);
 const formRef = ref();
+const showConfirmation = ref(false);
+const pendingUserData = ref<any>(null);
+
+// Confirmation config
+const confirmationConfig = ref({
+  title: '',
+  message: '',
+  details: '',
+  roleChanges: null as any,
+  type: 'warning' as 'warning' | 'error'
+});
 
 // Watch for user changes
 watch(() => props.user, (user) => {
@@ -189,7 +214,12 @@ async function handleSubmit() {
       }
     }
 
-    emit('save', userData);
+    // Check if role change requires confirmation
+    if (isEditing.value && authStore.isAdmin && requiresRoleConfirmation()) {
+      showRoleConfirmation(userData);
+    } else {
+      emit('save', userData);
+    }
   } catch (error) {
     // Form validation failed
     console.log('Form validation failed:', error);
@@ -200,6 +230,75 @@ async function handleSubmit() {
 
 function handleCancel() {
   emit('cancel');
+}
+
+// Helper functions for role confirmation
+function requiresRoleConfirmation(): boolean {
+  if (!props.user) return false;
+  
+  const oldRoles = props.user.roles;
+  const newRoles = formData.roles;
+  
+  // Adding admin role requires confirmation
+  if (!oldRoles.includes('admin') && newRoles.includes('admin')) {
+    return true;
+  }
+  
+  // Removing admin role requires confirmation
+  if (oldRoles.includes('admin') && !newRoles.includes('admin')) {
+    return true;
+  }
+  
+  return false;
+}
+
+function showRoleConfirmation(userData: any) {
+  const oldRoles = props.user!.roles;
+  const newRoles = formData.roles;
+  
+  const added = newRoles.filter(role => !oldRoles.includes(role));
+  const removed = oldRoles.filter(role => !newRoles.includes(role));
+  
+  let title = 'Confirm Role Changes';
+  let message = `You are about to change the roles for ${props.user!.name}.`;
+  let details = '';
+  let type: 'warning' | 'error' = 'warning';
+  
+  if (removed.includes('admin')) {
+    title = 'Remove Admin Access';
+    message = `You are about to remove admin access from ${props.user!.name}.`;
+    details = 'This will revoke all administrative privileges. The user will only have regular user access.';
+    type = 'error';
+  } else if (added.includes('admin')) {
+    title = 'Grant Admin Access';
+    message = `You are about to grant admin access to ${props.user!.name}.`;
+    details = 'This will give the user full administrative privileges including the ability to manage other users and roles.';
+    type = 'warning';
+  }
+  
+  confirmationConfig.value = {
+    title,
+    message,
+    details,
+    roleChanges: { added, removed },
+    type
+  };
+  
+  pendingUserData.value = userData;
+  showConfirmation.value = true;
+}
+
+function handleConfirmationAccept() {
+  if (pendingUserData.value) {
+    emit('save', pendingUserData.value);
+  }
+  handleConfirmationCancel();
+}
+
+function handleConfirmationCancel() {
+  showConfirmation.value = false;
+  pendingUserData.value = null;
+  loading.value = false;
 }
 </script>
 

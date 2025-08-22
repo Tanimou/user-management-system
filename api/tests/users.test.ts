@@ -239,7 +239,7 @@ describe('Users API - POST /api/users', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Roles must be an array containing at least "user"' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Roles must be an array containing valid roles and at least "user"' });
   });
 
   it('should handle duplicate email', async () => {

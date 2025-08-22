@@ -162,7 +162,7 @@ describe('User Detail API - PUT /api/users/{id}', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Cannot remove admin role from yourself' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Cannot remove your own admin role' });
   });
 
   it('should prevent self-deactivation', async () => {
