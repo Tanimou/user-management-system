@@ -219,14 +219,14 @@ const userMenuOptions = [
   { label: 'Logout', key: 'logout' },
 ];
 
-// Debounced search
+// Debounced search with reduced timeout for better UX
 let searchTimeout: NodeJS.Timeout;
 const debouncedSearch = () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     pagination.page = 1;
     loadUsers();
-  }, 500);
+  }, 300); // Reduced from 500ms for faster response
 };
 
 // Methods
@@ -512,6 +512,22 @@ onMounted(() => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .filters-card :deep(.n-space) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filters-card :deep(.n-space .n-space-item) {
+    margin-right: 0 !important;
+    margin-bottom: 8px;
+  }
+  
+  .filters-card :deep(.n-input),
+  .filters-card :deep(.n-select),
+  .filters-card :deep(.n-date-picker) {
+    width: 100% !important;
+  }
+
   .header-content {
     padding: 0 16px;
     height: 56px;
