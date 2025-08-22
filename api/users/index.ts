@@ -45,13 +45,12 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     } = req.query;
 
     // Parse and validate pagination parameters
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    let pageNum = Math.max(1, parseInt(page as string) || 1);
     const pageSize = Math.min(50, Math.max(1, parseInt(size as string) || 10));
-    const skip = (pageNum - 1) * pageSize;
-
-    // Build where clause
+    
+    // Calculate total first to validate page number
     const where: any = {};
-
+    
     // Handle search (OR on name and email)
     if (search && typeof search === 'string') {
       where.OR = [
@@ -65,6 +64,17 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
       where.isActive = active === 'true';
     }
 
+    // Get total count first for page validation
+    const total = await prisma.user.count({ where });
+    const maxPages = Math.max(1, Math.ceil(total / pageSize));
+    
+    // Ensure page number doesn't exceed available pages
+    if (pageNum > maxPages) {
+      pageNum = maxPages;
+    }
+    
+    const skip = (pageNum - 1) * pageSize;
+
     // Handle sorting
     const validOrderBy = ['name', 'email', 'createdAt'];
     const validOrder = ['asc', 'desc'];
@@ -72,28 +82,27 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     const sortField = validOrderBy.includes(orderBy as string) ? (orderBy as string) : 'createdAt';
     const sortOrder = validOrder.includes(order as string) ? (order as string) : 'desc';
 
-    // Execute queries
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-          avatarUrl: true,
-        },
-        orderBy: { [sortField]: sortOrder },
-        skip,
-        take: pageSize,
-      }),
-      prisma.user.count({ where }),
-    ]);
+    // Execute user query (total count already retrieved above)
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        avatarUrl: true,
+      },
+      orderBy: { [sortField]: sortOrder },
+      skip,
+      take: pageSize,
+    });
 
-    const totalPages = Math.ceil(total / pageSize);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const startItem = total === 0 ? 0 : skip + 1;
+    const endItem = Math.min(skip + pageSize, total);
 
     return res.status(200).json({
       data: users,
@@ -104,6 +113,8 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
         totalPages,
         hasNext: pageNum < totalPages,
         hasPrev: pageNum > 1,
+        startItem,
+        endItem,
       },
     });
   } catch (error) {

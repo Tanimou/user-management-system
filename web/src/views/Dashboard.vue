@@ -68,13 +68,23 @@
         <user-table
           :users="users"
           :loading="loading"
-          :pagination="pagination"
-          :sorting="sorting"
-          @update:page="handlePageChange"
-          @update:page-size="handlePageSizeChange"
+          :sorting="{ sortBy: paginationState.sortBy.value, sortOrder: paginationState.sortOrder.value }"
           @update:sorter="handleSorterChange"
           @edit="handleEdit"
           @delete="handleDelete"
+        />
+
+        <!-- Enhanced Pagination Controls -->
+        <pagination-controls
+          :current-page="paginationState.page.value"
+          :page-size="paginationState.size.value"
+          :total="total"
+          :total-pages="totalPages"
+          :start-item="startItem"
+          :end-item="endItem"
+          :loading="loading"
+          @update:page="handlePageChange"
+          @update:page-size="handlePageSizeChange"
         />
 
         <!-- Create/Edit User Modal -->
@@ -105,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
 import { 
@@ -118,12 +128,22 @@ import { useAuthStore, type User } from '@/stores/auth';
 import UserForm from '@/components/UserForm.vue';
 import UserProfile from '@/components/UserProfile.vue';
 import UserTable from '@/components/UserTable.vue';
+import PaginationControls from '@/components/PaginationControls.vue';
+import { usePaginationState } from '@/composables/usePaginationState';
 import apiClient from '@/api/axios';
 
 const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 const authStore = useAuthStore();
+
+// Enhanced pagination state with URL management
+const paginationState = usePaginationState({
+  defaultPage: 1,
+  defaultSize: 10,
+  defaultSortBy: 'createdAt',
+  defaultSortOrder: 'desc',
+});
 
 // State
 const users = ref<User[]>([]);
@@ -133,24 +153,39 @@ const showEditModal = ref(false);
 const showProfileModal = ref(false);
 const editingUser = ref<User | null>(null);
 
+// Derived state for pagination display
+const total = ref(0);
+const totalPages = ref(1);
+const startItem = ref(0);
+const endItem = ref(0);
+
+// Legacy filters - sync with pagination state
 const filters = reactive({
-  search: '',
-  active: undefined as boolean | undefined,
+  search: paginationState.search.value,
+  active: paginationState.active.value,
 });
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0,
-  showSizePicker: true,
-  pageSizes: [10, 20, 50],
+// Watch for changes in pagination state and update filters
+watch(() => paginationState.search.value, (newSearch) => {
+  filters.search = newSearch;
 });
 
-// Sorting
-const sorting = reactive({
-  sortBy: 'createdAt',
-  sortOrder: 'desc' as 'asc' | 'desc'
+watch(() => paginationState.active.value, (newActive) => {
+  filters.active = newActive;
 });
+
+// Watch for changes in filters and update pagination state
+watch(() => filters.search, (newSearch) => {
+  paginationState.setSearch(newSearch);
+});
+
+watch(() => filters.active, (newActive) => {
+  paginationState.setActive(newActive);
+});
+
+// Remove old pagination/sorting state as it's now handled by paginationState
+// const pagination = reactive({...});  // REMOVED
+// const sorting = reactive({...});     // REMOVED
 
 // Options
 const statusOptions = [
@@ -168,33 +203,23 @@ let searchTimeout: NodeJS.Timeout;
 const debouncedSearch = () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
-    pagination.page = 1;
+    // The search change will be handled by the watcher automatically
     loadUsers();
   }, 500);
 };
 
-// Methods
+// Load users with enhanced pagination state
 async function loadUsers() {
   loading.value = true;
   try {
-    const params: any = {
-      page: pagination.page,
-      size: pagination.pageSize,
-      sortBy: sorting.sortBy,
-      sortOrder: sorting.sortOrder,
-    };
-
-    if (filters.search) {
-      params.search = filters.search;
-    }
-
-    if (filters.active !== undefined) {
-      params.active = filters.active;
-    }
-
+    const params = paginationState.getApiParams();
     const response = await apiClient.get('/users', { params });
+    
     users.value = response.data.data;
-    pagination.total = response.data.pagination.total;
+    total.value = response.data.pagination.total;
+    totalPages.value = response.data.pagination.totalPages;
+    startItem.value = response.data.pagination.startItem || 0;
+    endItem.value = response.data.pagination.endItem || 0;
   } catch (error: any) {
     message.error(error.response?.data?.error || 'Failed to load users');
   } finally {
@@ -203,13 +228,12 @@ async function loadUsers() {
 }
 
 function handlePageChange(page: number) {
-  pagination.page = page;
+  paginationState.setPage(page);
   loadUsers();
 }
 
 function handlePageSizeChange(pageSize: number) {
-  pagination.pageSize = pageSize;
-  pagination.page = 1;
+  paginationState.setSize(pageSize);
   loadUsers();
 }
 
@@ -217,11 +241,10 @@ function handleSorterChange(sorterInfo: any) {
   if (!sorterInfo) return;
   
   const { columnKey, order } = sorterInfo;
-  sorting.sortBy = columnKey;
-  sorting.sortOrder = order === 'ascend' ? 'asc' : 'desc';
+  const sortBy = columnKey;
+  const sortOrder = order === 'ascend' ? 'asc' : 'desc';
   
-  // Reset to first page when sorting changes
-  pagination.page = 1;
+  paginationState.setSorting(sortBy, sortOrder);
   loadUsers();
 }
 

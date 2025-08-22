@@ -61,7 +61,9 @@ describe('Users API - GET /api/users', () => {
         total: 2,
         totalPages: 1,
         hasNext: false,
-        hasPrev: false
+        hasPrev: false,
+        startItem: 1,
+        endItem: 2,
       }
     });
   });
@@ -90,8 +92,9 @@ describe('Users API - GET /api/users', () => {
   });
 
   it('should handle pagination parameters', async () => {
-    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
-    vi.mocked(prisma.user.count).mockResolvedValue(0);
+    const mockUsers = [createMockUser(1, 'User 1', 'user1@example.com')];
+    vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers);
+    vi.mocked(prisma.user.count).mockResolvedValue(10); // Set a total that allows page 2
 
     const req = createMockRequest('GET', { page: '2', size: '5' }, { user: { userId: 1, roles: ['user'] } });
     const res = createMockResponse();
