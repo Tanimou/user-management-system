@@ -65,17 +65,17 @@
         </n-card>
 
         <!-- Users Table -->
-        <n-card>
-          <n-data-table
-            :columns="columns"
-            :data="users"
-            :loading="loading"
-            :pagination="paginationReactive"
-            :bordered="false"
-            @update:page="handlePageChange"
-            @update:page-size="handlePageSizeChange"
-          />
-        </n-card>
+        <user-table
+          :users="users"
+          :loading="loading"
+          :pagination="pagination"
+          :sorting="sorting"
+          @update:page="handlePageChange"
+          @update:page-size="handlePageSizeChange"
+          @update:sorter="handleSorterChange"
+          @edit="handleEdit"
+          @delete="handleDelete"
+        />
 
         <!-- Create/Edit User Modal -->
         <n-modal v-model:show="showCreateModal" preset="dialog" title="Create User">
@@ -93,25 +93,31 @@
             @cancel="handleCancelUser"
           />
         </n-modal>
+
+        <!-- User Profile Modal -->
+        <user-profile 
+          v-model:show="showProfileModal"
+          @updated="handleProfileUpdated"
+        />
       </n-layout-content>
     </n-layout>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, h, nextTick } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useMessage, useDialog, type DataTableColumns } from 'naive-ui';
+import { useMessage, useDialog } from 'naive-ui';
 import { 
   PersonOutline as PersonIcon,
   Add as AddIcon,
   Search as SearchIcon,
-  Refresh as RefreshIcon,
-  Create as EditIcon,
-  Trash as DeleteIcon
+  Refresh as RefreshIcon
 } from '@vicons/ionicons5';
 import { useAuthStore, type User } from '@/stores/auth';
 import UserForm from '@/components/UserForm.vue';
+import UserProfile from '@/components/UserProfile.vue';
+import UserTable from '@/components/UserTable.vue';
 import apiClient from '@/api/axios';
 
 const router = useRouter();
@@ -124,6 +130,7 @@ const users = ref<User[]>([]);
 const loading = ref(false);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
+const showProfileModal = ref(false);
 const editingUser = ref<User | null>(null);
 
 const filters = reactive({
@@ -139,11 +146,11 @@ const pagination = reactive({
   pageSizes: [10, 20, 50],
 });
 
-const paginationReactive = computed(() => ({
-  ...pagination,
-  onChange: (page: number) => handlePageChange(page),
-  onUpdatePageSize: (pageSize: number) => handlePageSizeChange(pageSize),
-}));
+// Sorting
+const sorting = reactive({
+  sortBy: 'createdAt',
+  sortOrder: 'desc' as 'asc' | 'desc'
+});
 
 // Options
 const statusOptions = [
@@ -154,52 +161,6 @@ const statusOptions = [
 const userMenuOptions = [
   { label: 'Profile', key: 'profile' },
   { label: 'Logout', key: 'logout' },
-];
-
-// Table columns
-const columns: DataTableColumns<User> = [
-  { title: 'ID', key: 'id', width: 80 },
-  { title: 'Name', key: 'name' },
-  { title: 'Email', key: 'email' },
-  {
-    title: 'Roles',
-    key: 'roles',
-    render: (row) => h('span', row.roles.join(', ')),
-  },
-  {
-    title: 'Status',
-    key: 'isActive',
-    render: (row) => h(
-      'n-tag',
-      { type: row.isActive ? 'success' : 'error' },
-      { default: () => row.isActive ? 'Active' : 'Inactive' }
-    ),
-  },
-  {
-    title: 'Created',
-    key: 'createdAt',
-    render: (row) => new Date(row.createdAt).toLocaleDateString(),
-  },
-  {
-    title: 'Actions',
-    key: 'actions',
-    width: 120,
-    render: (row) => h('div', { style: 'display: flex; gap: 8px;' }, [
-      h('n-button', {
-        size: 'small',
-        type: 'primary',
-        ghost: true,
-        onClick: () => handleEdit(row),
-      }, { default: () => h('n-icon', null, { default: () => h(EditIcon) }) }),
-      
-      authStore.isAdmin && row.id !== authStore.user?.id ? h('n-button', {
-        size: 'small',
-        type: 'error',
-        ghost: true,
-        onClick: () => handleDelete(row),
-      }, { default: () => h('n-icon', null, { default: () => h(DeleteIcon) }) }) : null,
-    ]),
-  },
 ];
 
 // Debounced search
@@ -219,6 +180,8 @@ async function loadUsers() {
     const params: any = {
       page: pagination.page,
       size: pagination.pageSize,
+      sortBy: sorting.sortBy,
+      sortOrder: sorting.sortOrder,
     };
 
     if (filters.search) {
@@ -246,6 +209,18 @@ function handlePageChange(page: number) {
 
 function handlePageSizeChange(pageSize: number) {
   pagination.pageSize = pageSize;
+  pagination.page = 1;
+  loadUsers();
+}
+
+function handleSorterChange(sorterInfo: any) {
+  if (!sorterInfo) return;
+  
+  const { columnKey, order } = sorterInfo;
+  sorting.sortBy = columnKey;
+  sorting.sortOrder = order === 'ascend' ? 'asc' : 'desc';
+  
+  // Reset to first page when sorting changes
   pagination.page = 1;
   loadUsers();
 }
@@ -305,9 +280,13 @@ function handleUserMenuSelect(key: string) {
     authStore.logout();
     router.push('/login');
   } else if (key === 'profile') {
-    // TODO: Implement profile modal
-    message.info('Profile editing coming soon');
+    showProfileModal.value = true;
   }
+}
+
+function handleProfileUpdated() {
+  // Profile was updated successfully, no need to reload users list
+  // The auth store is automatically updated
 }
 
 // Watch filters
@@ -378,5 +357,58 @@ onMounted(() => {
 
 .filters-card {
   margin-bottom: 24px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0 16px;
+    height: 56px;
+  }
+  
+  .header-content h1 {
+    font-size: 18px;
+  }
+  
+  .content {
+    padding: 16px;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  
+  .page-header h2 {
+    font-size: 20px;
+  }
+  
+  .filters-card {
+    margin-bottom: 16px;
+  }
+  
+  .filters-card :deep(.n-card__content) {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content h1 {
+    font-size: 16px;
+  }
+  
+  .content {
+    padding: 12px;
+  }
+  
+  .page-header h2 {
+    font-size: 18px;
+  }
+  
+  .filters-card :deep(.n-card__content) {
+    padding: 12px;
+  }
 }
 </style>

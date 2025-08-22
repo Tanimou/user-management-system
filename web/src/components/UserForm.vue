@@ -208,5 +208,18 @@ function handleCancel() {
   margin-top: 24px;
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .form-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .form-actions :deep(.n-button) {
+    width: 100%;
+  }
 }
 </style>
