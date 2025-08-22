@@ -41,10 +41,12 @@ export function createMockUser(
     id,
     name,
     email,
+    password: 'hashed-password', // Mock password field
     roles,
     isActive,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null, // Mock deletedAt field
     avatarUrl: avatarUrl || null,
   };
 }

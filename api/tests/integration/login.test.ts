@@ -291,8 +291,15 @@ describe('Login API Integration Tests', () => {
 
   describe('Rate Limiting', () => {
     it('should handle rate limit exceeded', async () => {
-      // Mock rate limiter to deny request
-      vi.mocked(createAuthRateLimit).mockReturnValue(() => false);
+      // Mock rate limiter to deny request and set response
+      vi.mocked(createAuthRateLimit).mockReturnValue((req, res) => {
+        res.status(429).json({
+          error: 'Too many login attempts',
+          code: 'RATE_LIMIT_EXCEEDED',
+          retryAfter: 60
+        });
+        return false;
+      });
 
       const req = createMockRequest('POST', {}, {
         body: {

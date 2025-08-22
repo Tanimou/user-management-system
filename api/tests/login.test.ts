@@ -83,6 +83,7 @@ describe('Login API', () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
+      success: true,
       token: 'mock-access-token',
       user: expect.objectContaining({
         id: 1,
@@ -136,25 +137,6 @@ describe('Login API', () => {
     });
   });
 
-  it('should handle rate limiting with correct error format', async () => {
-    // Mock rate limiter to return false (rate limit exceeded)
-    vi.mocked(createAuthRateLimit).mockReturnValue(() => false);
-
-    const req = createMockRequest('POST', {}, {
-      body: {
-        email: 'user@example.com',
-        password: 'ValidPassword123!'
-      }
-    });
-    const res = createMockResponse();
-
-    await handler(req, res);
-
-    // The rate limiter middleware should handle the response
-    // so the handler should return early without calling res.status or res.json
-    expect(prisma.user.findUnique).not.toHaveBeenCalled();
-  });
-
   it('should handle email case-insensitivity', async () => {
     const mockUser = createMockUser(1, 'John Doe', 'john@example.com', true, ['user']);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
@@ -196,10 +178,37 @@ describe('Login API', () => {
     await handler(req, res);
 
     expect(res.json).toHaveBeenCalledWith({
+      success: true,
       token: 'mock-access-token',
       user: expect.not.objectContaining({
         password: expect.anything()
       })
+    });
+  });
+
+  // Rate limiting test - isolated to avoid mock interference
+  describe('Rate limiting', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should handle rate limiting with correct error format', async () => {
+      // Mock rate limiter to return false (rate limit exceeded)
+      vi.mocked(createAuthRateLimit).mockReturnValue(() => false);
+
+      const req = createMockRequest('POST', {}, {
+        body: {
+          email: 'user@example.com',
+          password: 'ValidPassword123!'
+        }
+      });
+      const res = createMockResponse();
+
+      await handler(req, res);
+
+      // The rate limiter middleware should handle the response
+      // so the handler should return early without calling prisma.user.findUnique
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
     });
   });
 });

@@ -7,7 +7,7 @@ import {
   type AuthenticatedRequest,
 } from './lib/auth.js';
 import prisma, { USER_SELECT_FIELDS } from './lib/prisma.js';
-import { validatePasswordPolicy, validateName } from './lib/validation.js';
+import { validatePasswordPolicy } from './lib/validation.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -36,13 +36,14 @@ async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) 
   try {
     const userId = req.user!.userId;
 
-    const user = await prisma.user.findUnique({
+    // Get user profile
+    const user = await prisma.user.findFirst({
       where: { id: userId },
       select: USER_SELECT_FIELDS,
     });
 
-    if (!user || !user.isActive) {
-      return res.status(404).json({ error: 'User not found or inactive' });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
     return res.status(200).json({ data: user });

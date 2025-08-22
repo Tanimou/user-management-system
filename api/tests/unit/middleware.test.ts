@@ -44,7 +44,13 @@ function createMockResponse(): VercelResponse {
 
 describe('Authentication Middleware', () => {
   beforeEach(() => {
+    // Completely reset all mocks
+    vi.resetAllMocks();
     vi.clearAllMocks();
+    
+    // Re-setup basic mocks
+    vi.mocked(requireAuth).mockReset();
+    vi.mocked(requireRole).mockReset();
   });
 
   describe('authenticateRequest', () => {

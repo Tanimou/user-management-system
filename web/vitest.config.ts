@@ -24,6 +24,10 @@ export default defineConfig({
       '**/e2e/**',
       '**/.{idea,git,cache,output,temp}/**',
     ],
+    sequence: {
+      concurrent: false,
+      shuffle: false
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

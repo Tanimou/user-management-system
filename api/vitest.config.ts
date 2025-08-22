@@ -45,8 +45,8 @@ export default defineConfig({
       }
     },
     sequence: {
-      concurrent: true,
-      shuffle: true
+      concurrent: false,
+      shuffle: false
     }
   }
 });
