@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockRequest, createMockResponse } from '../utils/mocks';
-import { UserFactory, MockResponseFactory } from '../factories/user.factory';
+import { UserFactory } from '../factories/user.factory';
 
 // Mock dependencies
 vi.mock('../../lib/prisma', () => ({
