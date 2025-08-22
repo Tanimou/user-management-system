@@ -3,7 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { withAuth, verifyToken, type AuthenticatedRequest } from '../lib/middleware/enhanced-auth.js';
 import { withRoles, withAdminRole, withSelfOrAdmin, preventSelfDemotion } from '../lib/middleware/authorize.js';
 import { withCORS } from '../lib/middleware/security.js';
-import { withErrorHandling, handleApiError, AppError } from '../lib/middleware/errors.js';
+import { withErrorHandling, AppError } from '../lib/middleware/errors.js';
 import { validateBody, validateQuery } from '../lib/middleware/validation.js';
 import Joi from 'joi';
 
