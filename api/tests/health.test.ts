@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import handler from '../health.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
@@ -8,7 +8,32 @@ vi.mock('../lib/auth.js', () => ({
   setSecurityHeaders: vi.fn(),
 }));
 
-describe('Health Endpoint', () => {
+// Mock the logger
+vi.mock('../lib/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+// Mock the prisma module
+vi.mock('../lib/prisma.js', () => ({
+  prisma: {
+    $queryRaw: vi.fn(),
+  },
+}));
+
+// Mock the request logging middleware
+vi.mock('../lib/middleware/logging.js', () => ({
+  withRequestLogging: vi.fn((handler) => handler),
+}));
+
+describe('Enhanced Health Endpoint', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   const createMockRequest = (method = 'GET'): VercelRequest => ({
     method,
     headers: {},

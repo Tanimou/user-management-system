@@ -28,10 +28,14 @@
     "@types/node": "^20.10.6",
     "argon2": "^0.44.0",
     "jsonwebtoken": "^9.0.2",
+    "pino": "^9.9.0",
+    "pino-pretty": "^13.1.1",
     "prisma": "^5.7.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^8.40.0",
     "@typescript-eslint/project-service": "^8.40.0",
