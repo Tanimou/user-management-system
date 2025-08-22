@@ -137,6 +137,54 @@ describe('Users API - GET /api/users', () => {
       })
     );
   });
+
+  it('should handle role filter', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+    const req = createMockRequest('GET', { role: 'admin' }, { user: { userId: 1, roles: ['user'] } });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { roles: { has: 'admin' } }
+      })
+    );
+  });
+
+  it('should handle updatedAt sorting', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+    const req = createMockRequest('GET', { orderBy: 'updatedAt', order: 'desc' }, { user: { userId: 1, roles: ['user'] } });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: { updatedAt: 'desc' }
+      })
+    );
+  });
+
+  it('should ignore invalid role filter', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+    const req = createMockRequest('GET', { role: 'invalid' }, { user: { userId: 1, roles: ['user'] } });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {}
+      })
+    );
+  });
 });
 
 describe('Users API - POST /api/users', () => {

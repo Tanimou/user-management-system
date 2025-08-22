@@ -55,6 +55,14 @@
               :options="statusOptions"
             />
 
+            <n-select
+              v-model:value="filters.role"
+              placeholder="Role"
+              clearable
+              style="width: 120px"
+              :options="roleOptions"
+            />
+
             <n-button @click="loadUsers">
               <template #icon>
                 <n-icon><RefreshIcon /></n-icon>
@@ -105,8 +113,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
 import { 
   PersonOutline as PersonIcon,
@@ -121,6 +129,7 @@ import UserTable from '@/components/UserTable.vue';
 import apiClient from '@/api/axios';
 
 const router = useRouter();
+const route = useRoute();
 const message = useMessage();
 const dialog = useDialog();
 const authStore = useAuthStore();
@@ -136,6 +145,7 @@ const editingUser = ref<User | null>(null);
 const filters = reactive({
   search: '',
   active: undefined as boolean | undefined,
+  role: '' as string,
 });
 
 const pagination = reactive({
@@ -156,6 +166,11 @@ const sorting = reactive({
 const statusOptions = [
   { label: 'Active', value: true },
   { label: 'Inactive', value: false },
+];
+
+const roleOptions = [
+  { label: 'User', value: 'user' },
+  { label: 'Admin', value: 'admin' },
 ];
 
 const userMenuOptions = [
@@ -180,8 +195,8 @@ async function loadUsers() {
     const params: any = {
       page: pagination.page,
       size: pagination.pageSize,
-      sortBy: sorting.sortBy,
-      sortOrder: sorting.sortOrder,
+      orderBy: sorting.sortBy,
+      order: sorting.sortOrder,
     };
 
     if (filters.search) {
@@ -191,6 +206,19 @@ async function loadUsers() {
     if (filters.active !== undefined) {
       params.active = filters.active;
     }
+
+    if (filters.role) {
+      params.role = filters.role;
+    }
+
+    // Update URL with current filters
+    await router.replace({ 
+      query: {
+        ...params,
+        // Convert boolean to string for URL
+        ...(filters.active !== undefined && { active: filters.active.toString() })
+      }
+    });
 
     const response = await apiClient.get('/users', { params });
     users.value = response.data.data;
@@ -289,15 +317,53 @@ function handleProfileUpdated() {
   // The auth store is automatically updated
 }
 
+// Initialize filters from URL parameters
+function initializeFromURL() {
+  const query = route.query;
+  
+  if (query.search) {
+    filters.search = query.search as string;
+  }
+  
+  if (query.active !== undefined) {
+    filters.active = query.active === 'true' ? true : query.active === 'false' ? false : undefined;
+  }
+  
+  if (query.role) {
+    filters.role = query.role as string;
+  }
+  
+  if (query.orderBy) {
+    sorting.sortBy = query.orderBy as string;
+  }
+  
+  if (query.order) {
+    sorting.sortOrder = query.order as 'asc' | 'desc';
+  }
+  
+  if (query.page) {
+    pagination.page = parseInt(query.page as string) || 1;
+  }
+  
+  if (query.size) {
+    pagination.pageSize = parseInt(query.size as string) || 10;
+  }
+}
+
 // Watch filters
-import { watch } from 'vue';
 watch(() => filters.active, () => {
+  pagination.page = 1;
+  loadUsers();
+});
+
+watch(() => filters.role, () => {
   pagination.page = 1;
   loadUsers();
 });
 
 // Initialize
 onMounted(() => {
+  initializeFromURL();
   loadUsers();
 });
 </script>

@@ -40,6 +40,7 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
       size = '10',
       search = '',
       active,
+      role,
       orderBy = 'createdAt',
       order = 'desc',
     } = req.query;
@@ -65,8 +66,13 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
       where.isActive = active === 'true';
     }
 
+    // Handle role filter
+    if (role && typeof role === 'string' && (role === 'user' || role === 'admin')) {
+      where.roles = { has: role };
+    }
+
     // Handle sorting
-    const validOrderBy = ['name', 'email', 'createdAt'];
+    const validOrderBy = ['name', 'email', 'createdAt', 'updatedAt'];
     const validOrder = ['asc', 'desc'];
 
     const sortField = validOrderBy.includes(orderBy as string) ? (orderBy as string) : 'createdAt';
