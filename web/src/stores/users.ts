@@ -48,6 +48,102 @@ export const useUsersStore = defineStore('users', () => {
   async function loadUsers() {
     loading.value = true;
     try {
+      // Demo mode - return mock data if no real API
+      const token = localStorage.getItem('accessToken');
+      if (token === 'admin-token' || token === 'demo-token') {
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+        
+        const demoUsers: User[] = [
+          {
+            id: 1,
+            name: 'Demo User',
+            email: 'demo@demo.com',
+            roles: ['user'],
+            isActive: true,
+            createdAt: '2024-01-15T10:00:00Z',
+            updatedAt: '2024-01-15T10:00:00Z'
+          },
+          {
+            id: 2,
+            name: 'Admin User',
+            email: 'admin@demo.com',
+            roles: ['admin', 'user'],
+            isActive: true,
+            createdAt: '2024-01-10T09:00:00Z',
+            updatedAt: '2024-01-20T14:30:00Z'
+          },
+          {
+            id: 3,
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+            roles: ['user'],
+            isActive: true,
+            createdAt: '2024-02-01T08:00:00Z',
+            updatedAt: '2024-02-01T08:00:00Z'
+          },
+          {
+            id: 4,
+            name: 'Jane Smith',
+            email: 'jane.smith@example.com',
+            roles: ['user'],
+            isActive: false,
+            createdAt: '2024-01-20T12:00:00Z',
+            updatedAt: '2024-02-15T16:45:00Z',
+            deletedAt: '2024-02-15T16:45:00Z'
+          },
+          {
+            id: 5,
+            name: 'Bob Wilson',
+            email: 'bob.wilson@example.com',
+            roles: ['admin', 'user'],
+            isActive: true,
+            createdAt: '2024-01-05T07:30:00Z',
+            updatedAt: '2024-01-25T11:15:00Z'
+          }
+        ];
+
+        // Apply filtering
+        let filteredUsers = demoUsers;
+        
+        if (filters.value.search) {
+          const searchLower = filters.value.search.toLowerCase();
+          filteredUsers = filteredUsers.filter(u => 
+            u.name.toLowerCase().includes(searchLower) || 
+            u.email.toLowerCase().includes(searchLower)
+          );
+        }
+        
+        if (filters.value.role !== 'all') {
+          filteredUsers = filteredUsers.filter(u => 
+            u.roles.includes(filters.value.role)
+          );
+        }
+        
+        if (filters.value.status !== 'all') {
+          const isActive = filters.value.status === 'active';
+          filteredUsers = filteredUsers.filter(u => u.isActive === isActive);
+        }
+        
+        // Apply sorting
+        filteredUsers.sort((a, b) => {
+          const aVal = a[sorting.value.column as keyof User] as string;
+          const bVal = b[sorting.value.column as keyof User] as string;
+          const order = sorting.value.direction === 'asc' ? 1 : -1;
+          return aVal < bVal ? -order : aVal > bVal ? order : 0;
+        });
+        
+        // Apply pagination
+        const start = (pagination.value.page - 1) * pagination.value.size;
+        const end = start + pagination.value.size;
+        const paginatedUsers = filteredUsers.slice(start, end);
+        
+        users.value = paginatedUsers;
+        pagination.value.total = filteredUsers.length;
+        pagination.value.totalPages = Math.ceil(filteredUsers.length / pagination.value.size);
+        
+        return;
+      }
+
       const params: any = {
         page: pagination.value.page,
         size: pagination.value.size,

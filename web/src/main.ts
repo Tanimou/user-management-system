@@ -34,6 +34,19 @@ const routes = [
     component: Dashboard,
     meta: { requiresAuth: true }
   },
+  // Demo routes without auth for testing
+  { 
+    path: '/demo-user', 
+    name: 'DemoUser', 
+    component: Dashboard,
+    meta: { demo: 'user' }
+  },
+  { 
+    path: '/demo-admin', 
+    name: 'DemoAdmin', 
+    component: Dashboard,
+    meta: { demo: 'admin' }
+  },
   // Redirect /dashboard to /
   { 
     path: '/dashboard', 
@@ -59,6 +72,12 @@ app.use(naive);
 // Navigation guards
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
+
+  // Temporarily disable auth checks for demo - comment out for production
+  if (to.path.startsWith('/demo-')) {
+    next();
+    return;
+  }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login');

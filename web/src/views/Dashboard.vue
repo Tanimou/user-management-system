@@ -73,7 +73,7 @@
         <h1>{{ pageTitle }}</h1>
         <div class="action-buttons">
           <n-button 
-            v-if="isAdmin && $route.path === '/users'" 
+            v-if="isAdmin && ($route.path === '/users' || $route.path === '/demo-admin')" 
             @click="showAddUserModal = true"
             type="primary"
             class="btn-primary"
@@ -87,7 +87,7 @@
       </div>
 
       <!-- Admin: User Management Table -->
-      <div v-if="isAdmin && $route.path === '/users'" class="user-management">
+      <div v-if="isAdmin && ($route.path === '/users' || $route.path === '/demo-admin')" class="user-management">
         <div class="table-controls">
           <n-space>
             <n-input
@@ -434,8 +434,34 @@ watch(() => route.path, () => {
 });
 
 onMounted(() => {
+  // Handle demo mode
+  if (route.meta.demo) {
+    const demoUser: User = route.meta.demo === 'admin' 
+      ? {
+          id: 2,
+          name: 'Admin Demo',
+          email: 'admin@demo.com',
+          roles: ['admin', 'user'],
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      : {
+          id: 1,
+          name: 'User Demo',
+          email: 'user@demo.com',
+          roles: ['user'],
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+    
+    localStorage.setItem('accessToken', 'demo-token');
+    authStore.setDemoUser(demoUser);
+  }
+
   // Load users if on users page and user is admin
-  if (route.path === '/users' && isAdmin.value) {
+  if ((route.path === '/users' || route.path === '/demo-admin') && isAdmin.value) {
     usersStore.loadUsers();
   }
 });
