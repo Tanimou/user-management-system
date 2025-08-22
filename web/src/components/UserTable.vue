@@ -16,7 +16,8 @@ import { computed, h } from 'vue';
 import { type DataTableColumns } from 'naive-ui';
 import { 
   Create as EditIcon,
-  Trash as DeleteIcon
+  Trash as DeleteIcon,
+  Refresh as RestoreIcon
 } from '@vicons/ionicons5';
 import { useAuthStore, type User } from '@/stores/auth';
 import { getColumnSortOrder } from '@/utils/sorting';
@@ -28,12 +29,14 @@ interface Props {
     sortBy: string;
     sortOrder: 'asc' | 'desc';
   };
+  showDeletedColumn?: boolean;
 }
 
 interface Emits {
   (e: 'update:sorter', sorterInfo: any): void;
   (e: 'edit', user: User): void;
   (e: 'delete', user: User): void;
+  (e: 'restore', user: User): void;
 }
 
 const props = defineProps<Props>();
@@ -45,7 +48,7 @@ const authStore = useAuthStore();
 // const paginationReactive = computed(() => ({...})); // REMOVED
 
 // Table columns
-const columns: DataTableColumns<User> = [
+const columns = computed<DataTableColumns<User>>(() => [
   { title: 'ID', key: 'id', width: 80 },
   { 
     title: 'Name', 
@@ -67,11 +70,18 @@ const columns: DataTableColumns<User> = [
   {
     title: 'Status',
     key: 'isActive',
-    render: (row) => h(
-      'n-tag',
-      { type: row.isActive ? 'success' : 'error' },
-      { default: () => row.isActive ? 'Active' : 'Inactive' }
-    ),
+    render: (row) => h('div', { style: 'display: flex; flex-direction: column; gap: 2px;' }, [
+      h(
+        'n-tag',
+        { type: row.isActive ? 'success' : 'error' },
+        { default: () => row.isActive ? 'Active' : 'Inactive' }
+      ),
+      !row.isActive && row.deletedAt ? h(
+        'small',
+        { style: 'color: #666; font-size: 11px;' },
+        `Deleted: ${new Date(row.deletedAt).toLocaleDateString()}`
+      ) : null,
+    ]),
   },
   {
     title: 'Created',
@@ -80,6 +90,15 @@ const columns: DataTableColumns<User> = [
     sortOrder: getColumnSortOrder('createdAt', props.sorting.sortBy, props.sorting.sortOrder),
     render: (row) => new Date(row.createdAt).toLocaleDateString(),
   },
+  // Conditionally add deleted column for deactivated users view
+  ...(props.showDeletedColumn ? [{
+    title: 'Deleted',
+    key: 'deletedAt',
+    sorter: true,
+    sortOrder: getColumnSortOrder('deletedAt', props.sorting.sortBy, props.sorting.sortOrder),
+    render: (row: User) => row.deletedAt ? new Date(row.deletedAt).toLocaleDateString() : '-',
+    width: 120,
+  }] : []),
   {
     title: 'Updated',
     key: 'updatedAt',
@@ -90,7 +109,7 @@ const columns: DataTableColumns<User> = [
   {
     title: 'Actions',
     key: 'actions',
-    width: 120,
+    width: 150,
     render: (row) => h('div', { style: 'display: flex; gap: 8px;' }, [
       h('n-button', {
         size: 'small',
@@ -99,15 +118,23 @@ const columns: DataTableColumns<User> = [
         onClick: () => handleEdit(row),
       }, { default: () => h('n-icon', null, { default: () => h(EditIcon) }) }),
       
-      authStore.isAdmin && row.id !== authStore.user?.id ? h('n-button', {
-        size: 'small',
-        type: 'error',
-        ghost: true,
-        onClick: () => handleDelete(row),
-      }, { default: () => h('n-icon', null, { default: () => h(DeleteIcon) }) }) : null,
+      authStore.isAdmin && row.id !== authStore.user?.id ? (
+        row.isActive ? h('n-button', {
+          size: 'small',
+          type: 'error',
+          ghost: true,
+          onClick: () => handleDelete(row),
+        }, { default: () => h('n-icon', null, { default: () => h(DeleteIcon) }) }) 
+        : h('n-button', {
+          size: 'small',
+          type: 'success',
+          ghost: true,
+          onClick: () => handleRestore(row),
+        }, { default: () => h('n-icon', null, { default: () => h(RestoreIcon) }) })
+      ) : null,
     ]),
   },
-];
+]);
 
 // Methods - remove pagination handling as it's now external
 function handleSorterChange(sorterInfo: any) {
@@ -120,6 +147,10 @@ function handleEdit(user: User) {
 
 function handleDelete(user: User) {
   emit('delete', user);
+}
+
+function handleRestore(user: User) {
+  emit('restore', user);
 }
 </script>
 

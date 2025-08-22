@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockRequest, createMockResponse, createMockUser, createMockJWTPayload } from './utils/mocks';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockRequest, createMockResponse, createMockUser } from './utils/mocks';
 
 // Mock prisma
 vi.mock('../lib/prisma', () => ({
@@ -10,7 +10,7 @@ vi.mock('../lib/prisma', () => ({
     },
     auditLog: {
       create: vi.fn(),
-    }
+    },
   },
   USER_SELECT_FIELDS: {
     id: true,
@@ -21,7 +21,7 @@ vi.mock('../lib/prisma', () => ({
     createdAt: true,
     updatedAt: true,
     avatarUrl: true,
-  }
+  },
 }));
 
 // Mock auth functions
@@ -37,9 +37,9 @@ vi.mock('../lib/auth', async () => {
   };
 });
 
-import handler from '../users/[id]';
+import { hashPassword, requireAuth, requireRole } from '../lib/auth';
 import prisma from '../lib/prisma';
-import { requireAuth, requireRole, hashPassword } from '../lib/auth';
+import handler from '../users/[id]';
 
 describe('User Detail API - GET /api/users/{id}', () => {
   beforeEach(() => {
@@ -86,7 +86,11 @@ describe('User Detail API - GET /api/users/{id}', () => {
   });
 
   it('should return 400 for invalid ID', async () => {
-    const req = createMockRequest('GET', { id: 'invalid' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      { id: 'invalid' },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -106,15 +110,19 @@ describe('User Detail API - PUT /api/users/{id}', () => {
   it('should allow admin to update any user', async () => {
     const existingUser = createMockUser(2, 'Jane Doe', 'jane@example.com');
     const updatedUser = { ...existingUser, name: 'Jane Smith' };
-    
+
     vi.mocked(requireRole).mockReturnValue(true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(existingUser);
     vi.mocked(prisma.user.update).mockResolvedValue(updatedUser);
 
-    const req = createMockRequest('PUT', { id: '2' }, {
-      user: { userId: 1, roles: ['admin'] },
-      body: { name: 'Jane Smith' }
-    });
+    const req = createMockRequest(
+      'PUT',
+      { id: '2' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: { name: 'Jane Smith' },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -122,22 +130,26 @@ describe('User Detail API - PUT /api/users/{id}', () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       message: 'User updated successfully',
-      data: updatedUser
+      data: updatedUser,
     });
   });
 
   it('should allow user to update their own profile', async () => {
     const existingUser = createMockUser(1, 'John Doe', 'john@example.com');
     const updatedUser = { ...existingUser, name: 'John Smith' };
-    
+
     vi.mocked(requireRole).mockReturnValue(false); // Not admin
     vi.mocked(prisma.user.findUnique).mockResolvedValue(existingUser);
     vi.mocked(prisma.user.update).mockResolvedValue(updatedUser);
 
-    const req = createMockRequest('PUT', { id: '1' }, {
-      user: { userId: 1, roles: ['user'] },
-      body: { name: 'John Smith' }
-    });
+    const req = createMockRequest(
+      'PUT',
+      { id: '1' },
+      {
+        user: { userId: 1, roles: ['user'] },
+        body: { name: 'John Smith' },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -148,10 +160,14 @@ describe('User Detail API - PUT /api/users/{id}', () => {
   it('should prevent non-admin user from updating others', async () => {
     vi.mocked(requireRole).mockReturnValue(false); // Not admin
 
-    const req = createMockRequest('PUT', { id: '2' }, {
-      user: { userId: 1, roles: ['user'] },
-      body: { name: 'New Name' }
-    });
+    const req = createMockRequest(
+      'PUT',
+      { id: '2' },
+      {
+        user: { userId: 1, roles: ['user'] },
+        body: { name: 'New Name' },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -162,14 +178,18 @@ describe('User Detail API - PUT /api/users/{id}', () => {
 
   it('should prevent self-demotion from admin role', async () => {
     const adminUser = createMockUser(1, 'Admin User', 'admin@example.com', true, ['user', 'admin']);
-    
+
     vi.mocked(requireRole).mockReturnValue(true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(adminUser);
 
-    const req = createMockRequest('PUT', { id: '1' }, {
-      user: { userId: 1, roles: ['admin'] },
-      body: { roles: ['user'] } // Trying to remove admin role
-    });
+    const req = createMockRequest(
+      'PUT',
+      { id: '1' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: { roles: ['user'] }, // Trying to remove admin role
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -180,14 +200,18 @@ describe('User Detail API - PUT /api/users/{id}', () => {
 
   it('should prevent self-deactivation', async () => {
     const adminUser = createMockUser(1, 'Admin User', 'admin@example.com');
-    
+
     vi.mocked(requireRole).mockReturnValue(true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(adminUser);
 
-    const req = createMockRequest('PUT', { id: '1' }, {
-      user: { userId: 1, roles: ['admin'] },
-      body: { isActive: false }
-    });
+    const req = createMockRequest(
+      'PUT',
+      { id: '1' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: { isActive: false },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -198,14 +222,18 @@ describe('User Detail API - PUT /api/users/{id}', () => {
 
   it('should prevent non-admin from updating email', async () => {
     const existingUser = createMockUser(1, 'User', 'user@example.com');
-    
+
     vi.mocked(requireRole).mockReturnValue(false);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(existingUser);
 
-    const req = createMockRequest('PUT', { id: '1' }, {
-      user: { userId: 1, roles: ['user'] },
-      body: { email: 'newemail@example.com' }
-    });
+    const req = createMockRequest(
+      'PUT',
+      { id: '1' },
+      {
+        user: { userId: 1, roles: ['user'] },
+        body: { email: 'newemail@example.com' },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -216,14 +244,18 @@ describe('User Detail API - PUT /api/users/{id}', () => {
 
   it('should prevent non-admin from updating roles', async () => {
     const existingUser = createMockUser(1, 'User', 'user@example.com');
-    
+
     vi.mocked(requireRole).mockReturnValue(false);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(existingUser);
 
-    const req = createMockRequest('PUT', { id: '1' }, {
-      user: { userId: 1, roles: ['user'] },
-      body: { roles: ['user', 'admin'] }
-    });
+    const req = createMockRequest(
+      'PUT',
+      { id: '1' },
+      {
+        user: { userId: 1, roles: ['user'] },
+        body: { roles: ['user', 'admin'] },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -234,14 +266,18 @@ describe('User Detail API - PUT /api/users/{id}', () => {
 
   it('should validate password length', async () => {
     const existingUser = createMockUser(1, 'User', 'user@example.com');
-    
+
     vi.mocked(requireRole).mockReturnValue(false);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(existingUser);
 
-    const req = createMockRequest('PUT', { id: '1' }, {
-      user: { userId: 1, roles: ['user'] },
-      body: { password: 'short' }
-    });
+    const req = createMockRequest(
+      'PUT',
+      { id: '1' },
+      {
+        user: { userId: 1, roles: ['user'] },
+        body: { password: 'short' },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -249,10 +285,8 @@ describe('User Detail API - PUT /api/users/{id}', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       error: 'Password does not meet policy requirements',
-      details: expect.arrayContaining([
-        'Password must be at least 8 characters long'
-      ]),
-      code: 'INVALID_PASSWORD_POLICY'
+      details: expect.arrayContaining(['Password must be at least 8 characters long']),
+      code: 'INVALID_PASSWORD_POLICY',
     });
   });
 });
@@ -267,35 +301,46 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
   it('should soft delete user when admin', async () => {
     const existingUser = createMockUser(2, 'To Delete', 'delete@example.com');
     const deletedUser = { ...existingUser, isActive: false };
-    
+
     vi.mocked(prisma.user.findUnique).mockResolvedValue(existingUser);
     vi.mocked(prisma.user.update).mockResolvedValue(deletedUser);
 
-    const req = createMockRequest('DELETE', { id: '2' }, {
-      user: { userId: 1, roles: ['admin'] }
-    });
+    const req = createMockRequest(
+      'DELETE',
+      { id: '2' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
 
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 2 },
-      data: { isActive: false },
-      select: expect.any(Object)
+      data: {
+        isActive: false,
+        deletedAt: expect.any(Date),
+      },
+      select: expect.any(Object),
     });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       message: 'User deleted successfully',
-      data: deletedUser
+      data: deletedUser,
     });
   });
 
   it('should prevent non-admin from deleting', async () => {
     vi.mocked(requireRole).mockReturnValue(false);
 
-    const req = createMockRequest('DELETE', { id: '2' }, {
-      user: { userId: 1, roles: ['user'] }
-    });
+    const req = createMockRequest(
+      'DELETE',
+      { id: '2' },
+      {
+        user: { userId: 1, roles: ['user'] },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -305,9 +350,13 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
   });
 
   it('should prevent self-deletion', async () => {
-    const req = createMockRequest('DELETE', { id: '1' }, {
-      user: { userId: 1, roles: ['admin'] }
-    });
+    const req = createMockRequest(
+      'DELETE',
+      { id: '1' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -318,12 +367,16 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
 
   it('should handle already deleted user', async () => {
     const alreadyDeleted = createMockUser(2, 'Deleted', 'deleted@example.com', false);
-    
+
     vi.mocked(prisma.user.findUnique).mockResolvedValue(alreadyDeleted);
 
-    const req = createMockRequest('DELETE', { id: '2' }, {
-      user: { userId: 1, roles: ['admin'] }
-    });
+    const req = createMockRequest(
+      'DELETE',
+      { id: '2' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -335,14 +388,137 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
   it('should handle non-existent user', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
-    const req = createMockRequest('DELETE', { id: '999' }, {
-      user: { userId: 1, roles: ['admin'] }
-    });
+    const req = createMockRequest(
+      'DELETE',
+      { id: '999' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
+  });
+});
+
+describe('User Detail API - POST /api/users/{id} (restore)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireAuth).mockResolvedValue(true);
+    vi.mocked(requireRole).mockReturnValue(true);
+  });
+
+  it('should restore deactivated user when admin', async () => {
+    const deactivatedUser = createMockUser(2, 'Deactivated User', 'inactive@example.com', false);
+    const restoredUser = { ...deactivatedUser, isActive: true, deletedAt: null };
+
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(deactivatedUser);
+    vi.mocked(prisma.user.update).mockResolvedValue(restoredUser);
+
+    const req = createMockRequest(
+      'POST',
+      { id: '2' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: { action: 'restore' },
+      }
+    );
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 2 },
+      data: {
+        isActive: true,
+        deletedAt: null,
+        updatedAt: expect.any(Date),
+      },
+      select: expect.any(Object),
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'User restored successfully',
+      data: restoredUser,
+    });
+  });
+
+  it('should prevent non-admin from restoring', async () => {
+    vi.mocked(requireRole).mockReturnValue(false);
+
+    const req = createMockRequest(
+      'POST',
+      { id: '2' },
+      {
+        user: { userId: 1, roles: ['user'] },
+        body: { action: 'restore' },
+      }
+    );
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Admin role required' });
+  });
+
+  it('should handle already active user', async () => {
+    const activeUser = createMockUser(2, 'Active User', 'active@example.com', true);
+
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(activeUser);
+
+    const req = createMockRequest(
+      'POST',
+      { id: '2' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: { action: 'restore' },
+      }
+    );
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'User is already active' });
+  });
+
+  it('should handle non-existent user for restore', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+
+    const req = createMockRequest(
+      'POST',
+      { id: '999' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: { action: 'restore' },
+      }
+    );
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
+  });
+
+  it('should handle invalid action', async () => {
+    const req = createMockRequest(
+      'POST',
+      { id: '2' },
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: { action: 'invalid' },
+      }
+    );
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Invalid action' });
   });
 });

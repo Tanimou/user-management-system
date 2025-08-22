@@ -1,4 +1,5 @@
 import type { VercelResponse } from '@vercel/node';
+import { logUserCreation } from '../lib/audit-logger.js';
 import {
   hashPassword,
   requireAuth,
@@ -7,11 +8,10 @@ import {
   setSecurityHeaders,
   type AuthenticatedRequest,
 } from '../lib/auth.js';
-import prisma, { USER_SELECT_FIELDS } from '../lib/prisma.js';
-import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
+import prisma from '../lib/prisma.js';
 import { validateRoles } from '../lib/role-validation.js';
-import { logUserCreation } from '../lib/audit-logger.js';
 import { getValidatedSorting } from '../lib/sorting.js';
+import { validateEmail, validateName, validatePasswordPolicy } from '../lib/validation.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -102,6 +102,7 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     }
 
     // Get total count first for page validation
+    // Get total count first for page validation
     const total = await prisma.user.count({ where });
     const maxPages = Math.max(1, Math.ceil(total / pageSize));
     
@@ -115,10 +116,23 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     // Handle sorting
     const { sortField, sortOrder } = getValidatedSorting(orderBy, order);
 
-    // Execute user query (total count already retrieved above)
+
+    // Execute queries
     const users = await prisma.user.findMany({
       where,
-      select: USER_SELECT_FIELDS,
+
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+        avatarUrl: true,
+      },
+
       orderBy: { [sortField]: sortOrder },
       skip,
       take: pageSize,
@@ -218,6 +232,7 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
       password: hashedPassword,
       roles,
       isActive: true,
+      deletedAt: null,
       updatedAt: new Date(),
     };
 
@@ -227,13 +242,37 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
       user = await prisma.user.update({
         where: { id: existingUser.id },
         data: userData,
-        select: USER_SELECT_FIELDS,
+
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          roles: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+          deletedAt: true,
+          avatarUrl: true,
+        },
+
       });
     } else {
       // Create new user
       user = await prisma.user.create({
         data: userData,
-        select: USER_SELECT_FIELDS,
+
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          roles: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+          deletedAt: true,
+          avatarUrl: true,
+        },
+
       });
     }
 

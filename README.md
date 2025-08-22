@@ -6,14 +6,14 @@ A full-stack user management application built with Vue 3 SPA frontend and Verce
 
 - **JWT Authentication** with access tokens (15 min) + refresh tokens (7 days) with rotation
 - **Role-based Access Control** (admin/user roles)
-- **Soft Delete System** preventing data loss
+- **Soft Delete System** with user recovery functionality
 - **Advanced Search & Filtering** with pagination
 - **Responsive UI** built with Vue 3 + Naive UI
 - **Secure Backend** with argon2id password hashing
 - **Real-time Token Refresh** with automatic retry on 401 errors
 - **Production-Ready Infrastructure** with CI/CD, monitoring, and security scanning
 - **Health Monitoring** with `/health` endpoint for system status
-- **Automated Testing** with 54+ tests covering all functionality
+- **Automated Testing** with 140+ tests covering all functionality
 
 ## 🏗️ Architecture
 
@@ -171,6 +171,8 @@ vercel --prod
 - `GET /api/users/{id}` - Get user by ID
 - `PUT /api/users/{id}` - Update user (admin or self)
 - `DELETE /api/users/{id}` - Soft delete user (admin only)
+- `GET /api/users/deactivated` - List deactivated users (admin only)
+- `POST /api/users/{id}` - Restore deactivated user (admin only, with `action: 'restore'`)
 
 ### Profile
 - `GET /api/me` - Get current user profile
@@ -191,6 +193,8 @@ vercel --prod
 - User table with sorting and pagination
 - Advanced search (name, email)
 - Status filtering (active/inactive)
+- Deactivated users management (admin only)
+- User recovery and restoration functionality
 - Create/Edit user modals (admin only)
 - Soft delete functionality (admin only)
 - Profile management
