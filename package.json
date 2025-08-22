@@ -48,5 +48,8 @@
     "inherits": "^2.0.4",
     "tsx": "^4.20.4",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "joi": "^18.0.1"
   }
 }

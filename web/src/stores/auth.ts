@@ -111,8 +111,23 @@ export const useAuthStore = defineStore('auth', () => {
         return { success: true };
       }
 
-      const response = await apiClient.post('/login', { email, password: pass });
-      const { user: userData, token: accessToken } = response.data;
+
+      const response = await apiClient.post('/login', { email, password });
+      console.log('Login API response:', response);
+      
+      // The login API returns { token, user } directly, not in ApiResponse format
+      const { token: accessToken, user: userData } = response as any;
+
+      // Store token based on remember me preference
+      if (rememberMe) {
+        localStorage.setItem('accessToken', accessToken);
+        // Also store a flag to indicate this is a persistent session
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        sessionStorage.setItem('accessToken', accessToken);
+        localStorage.removeItem('rememberMe');
+      }
+
 
       token.value = accessToken;
       localStorage.setItem('auth_token', accessToken);

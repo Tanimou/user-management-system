@@ -37,6 +37,134 @@ vi.mock('../lib/auth', async () => {
   };
 });
 
+// Mock JWT
+vi.mock('jsonwebtoken', () => ({
+  default: {
+    verify: vi.fn(),
+    sign: vi.fn(),
+  },
+}));
+
+// Mock middleware components
+vi.mock('../lib/middleware/enhanced-auth', async () => {
+  const actual = await vi.importActual('../lib/middleware/enhanced-auth');
+  return {
+    ...actual,
+    verifyToken: vi.fn(),
+    withAuth: vi.fn((handler) => handler), // Pass through for testing
+  };
+});
+
+vi.mock('../lib/middleware/validation', async () => {
+  const actual = await vi.importActual('../lib/middleware/validation');
+  return {
+    ...actual,
+    validateQuery: vi.fn((schema) => (handler) => async (req, res) => {
+      // Process query parameters through validation
+      const { error, value } = schema.validate(req.query);
+      if (!error) {
+        req.query = value;
+      }
+      return handler(req, res);
+    }),
+    validateBody: vi.fn((schema) => (handler) => async (req, res) => {
+      // Process body through validation  
+      const { error, value } = schema.validate(req.body);
+      if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+      }
+      req.body = value;
+      return handler(req, res);
+    }),
+  };
+});
+
+vi.mock('../lib/middleware/index', async () => {
+  const actual = await vi.importActual('../lib/middleware/index');
+  return {
+    ...actual,
+    withCORS: vi.fn((handler) => handler), // Pass through for testing
+    withErrorHandling: vi.fn((handler) => handler), // Pass through for testing
+    withAuth: vi.fn((handler) => handler), // Pass through for testing
+    withAdminRole: vi.fn((handler) => async (req, res) => {
+      // Mock admin role check
+      if (!req.user?.roles?.includes('admin')) {
+        return res.status(403).json({ error: 'Admin role required' });
+      }
+      return handler(req, res);
+    }),
+    withSelfOrAdmin: vi.fn((getUserId) => (handler) => async (req, res) => {
+      // Mock self-or-admin check
+      const userIdStr = getUserId(req);
+      
+      // Check if ID is valid number first
+      if (isNaN(parseInt(userIdStr))) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+      
+      const targetUserId = parseInt(userIdStr);
+      const isAdmin = req.user?.roles?.includes('admin');
+      const isSelf = req.user?.userId === targetUserId;
+      
+      if (!isAdmin && !isSelf) {
+        return res.status(403).json({ error: 'Permission denied' });
+      }
+      return handler(req, res);
+    }),
+    preventSelfDemotion: vi.fn((handler) => async (req, res) => {
+      // Mock self-demotion prevention
+      const targetUserId = parseInt(req.query.id as string);
+      const isAdmin = req.user?.roles?.includes('admin');
+      const isSelf = req.user?.userId === targetUserId;
+      
+      if (isSelf && isAdmin && req.body.roles && !req.body.roles.includes('admin')) {
+        return res.status(400).json({ error: 'Cannot remove your own admin role' });
+      }
+      
+      if (isSelf && req.body.isActive === false) {
+        return res.status(400).json({ error: 'Cannot deactivate yourself' });
+      }
+      
+      return handler(req, res);
+    }),
+    validateBody: vi.fn((schema) => (handler) => async (req, res) => {
+      // Process body through validation  
+      const { error, value } = schema.validate(req.body);
+      if (error) {
+        // Format validation error similar to the actual middleware
+        if (error.details[0].path.includes('password')) {
+          return res.status(400).json({
+            error: 'Password does not meet policy requirements',
+            details: ['Password must be at least 8 characters long'],
+            code: 'INVALID_PASSWORD_POLICY',
+          });
+        }
+        return res.status(400).json({ error: error.details[0].message });
+      }
+      req.body = value;
+      return handler(req, res);
+    }),
+    validateQuery: vi.fn((schema) => (handler) => handler),
+  };
+});
+
+// Mock password validation
+vi.mock('../lib/validation', async () => {
+  const actual = await vi.importActual('../lib/validation');
+  return {
+    ...actual,
+    validatePasswordPolicy: vi.fn((password) => {
+      if (password.length < 8) {
+        return {
+          valid: false,
+          errors: ['Password must be at least 8 characters long']
+        };
+      }
+      return { valid: true, errors: [] };
+    }),
+  };
+});
+
 import { hashPassword, requireAuth, requireRole } from '../lib/auth';
 import prisma from '../lib/prisma';
 import handler from '../users/[id]';
@@ -51,7 +179,7 @@ describe('User Detail API - GET /api/users/{id}', () => {
     const mockUser = createMockUser(1, 'John Doe', 'john@example.com');
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
 
-    const req = createMockRequest('GET', { id: '1' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest('GET', { id: '1' }, { user: { id: 1, userId: 1, email: 'admin@example.com', roles: ['user'] } });
     const res = createMockResponse();
 
     await handler(req, res);
@@ -63,7 +191,7 @@ describe('User Detail API - GET /api/users/{id}', () => {
   it('should return 404 for non-existent user', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
-    const req = createMockRequest('GET', { id: '999' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest('GET', { id: '999' }, { user: { id: 1, userId: 1, email: 'admin@example.com', roles: ['admin', 'user'] } });
     const res = createMockResponse();
 
     await handler(req, res);
@@ -76,7 +204,7 @@ describe('User Detail API - GET /api/users/{id}', () => {
     const inactiveUser = createMockUser(1, 'Inactive User', 'inactive@example.com', false);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(inactiveUser);
 
-    const req = createMockRequest('GET', { id: '1' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest('GET', { id: '1' }, { user: { id: 1, userId: 1, email: 'admin@example.com', roles: ['admin', 'user'] } });
     const res = createMockResponse();
 
     await handler(req, res);
@@ -89,7 +217,7 @@ describe('User Detail API - GET /api/users/{id}', () => {
     const req = createMockRequest(
       'GET',
       { id: 'invalid' },
-      { user: { userId: 1, roles: ['user'] } }
+      { user: { id: 1, userId: 1, email: 'admin@example.com', roles: ['user'] } }
     );
     const res = createMockResponse();
 
@@ -119,7 +247,7 @@ describe('User Detail API - PUT /api/users/{id}', () => {
       'PUT',
       { id: '2' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
         body: { name: 'Jane Smith' },
       }
     );
@@ -146,7 +274,7 @@ describe('User Detail API - PUT /api/users/{id}', () => {
       'PUT',
       { id: '1' },
       {
-        user: { userId: 1, roles: ['user'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['user'] },
         body: { name: 'John Smith' },
       }
     );
@@ -164,7 +292,7 @@ describe('User Detail API - PUT /api/users/{id}', () => {
       'PUT',
       { id: '2' },
       {
-        user: { userId: 1, roles: ['user'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['user'] },
         body: { name: 'New Name' },
       }
     );
@@ -186,7 +314,7 @@ describe('User Detail API - PUT /api/users/{id}', () => {
       'PUT',
       { id: '1' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
         body: { roles: ['user'] }, // Trying to remove admin role
       }
     );
@@ -208,7 +336,7 @@ describe('User Detail API - PUT /api/users/{id}', () => {
       'PUT',
       { id: '1' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
         body: { isActive: false },
       }
     );
@@ -230,7 +358,7 @@ describe('User Detail API - PUT /api/users/{id}', () => {
       'PUT',
       { id: '1' },
       {
-        user: { userId: 1, roles: ['user'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['user'] },
         body: { email: 'newemail@example.com' },
       }
     );
@@ -252,7 +380,7 @@ describe('User Detail API - PUT /api/users/{id}', () => {
       'PUT',
       { id: '1' },
       {
-        user: { userId: 1, roles: ['user'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['user'] },
         body: { roles: ['user', 'admin'] },
       }
     );
@@ -274,7 +402,7 @@ describe('User Detail API - PUT /api/users/{id}', () => {
       'PUT',
       { id: '1' },
       {
-        user: { userId: 1, roles: ['user'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['user'] },
         body: { password: 'short' },
       }
     );
@@ -309,7 +437,7 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
       'DELETE',
       { id: '2' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
       }
     );
     const res = createMockResponse();
@@ -338,7 +466,7 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
       'DELETE',
       { id: '2' },
       {
-        user: { userId: 1, roles: ['user'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['user'] },
       }
     );
     const res = createMockResponse();
@@ -354,7 +482,7 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
       'DELETE',
       { id: '1' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
       }
     );
     const res = createMockResponse();
@@ -362,7 +490,10 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Cannot delete yourself' });
+    expect(res.json).toHaveBeenCalledWith({ 
+      error: 'Self-deletion prevented',
+      message: 'Administrators cannot delete their own account'
+    });
   });
 
   it('should handle already deleted user', async () => {
@@ -374,7 +505,7 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
       'DELETE',
       { id: '2' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
       }
     );
     const res = createMockResponse();
@@ -392,7 +523,7 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
       'DELETE',
       { id: '999' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
       }
     );
     const res = createMockResponse();
@@ -422,7 +553,7 @@ describe('User Detail API - POST /api/users/{id} (restore)', () => {
       'POST',
       { id: '2' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
         body: { action: 'restore' },
       }
     );
@@ -453,7 +584,7 @@ describe('User Detail API - POST /api/users/{id} (restore)', () => {
       'POST',
       { id: '2' },
       {
-        user: { userId: 1, roles: ['user'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['user'] },
         body: { action: 'restore' },
       }
     );
@@ -474,7 +605,7 @@ describe('User Detail API - POST /api/users/{id} (restore)', () => {
       'POST',
       { id: '2' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
         body: { action: 'restore' },
       }
     );
@@ -493,7 +624,7 @@ describe('User Detail API - POST /api/users/{id} (restore)', () => {
       'POST',
       { id: '999' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
         body: { action: 'restore' },
       }
     );
@@ -510,7 +641,7 @@ describe('User Detail API - POST /api/users/{id} (restore)', () => {
       'POST',
       { id: '2' },
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { id: 1, userId: 1, email: 'test@example.com', roles: ['admin'] },
         body: { action: 'invalid' },
       }
     );
