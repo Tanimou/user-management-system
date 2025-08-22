@@ -222,13 +222,14 @@ export function createAuthRateLimit(config: RateLimitConfig = LOGIN_CONFIG) {
     }
     
     if (!result.allowed) {
-      let message = 'Too many requests. Please try again later.';
+      let message = 'Too many login attempts';
       if (result.blockedUntil) {
         message = `Account temporarily blocked due to repeated failures. Try again in ${result.retryAfter} seconds.`;
       }
       
       res.status(429).json({
         error: message,
+        code: "RATE_LIMIT_EXCEEDED",
         retryAfter: result.retryAfter
       });
       return false;
