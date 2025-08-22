@@ -1,6 +1,6 @@
 import type { User } from '@prisma/client';
 import { hashPassword } from '../../lib/auth';
-
+import * as crypto from 'crypto';
 export interface UserFactoryOptions {
   name?: string;
   email?: string;
@@ -253,7 +253,9 @@ export class TestDataUtils {
    * Generate a unique email address
    */
   static generateEmail(prefix: string = 'test'): string {
-    return `${prefix}${Date.now()}${Math.random().toString(36).substring(7)}@example.com`;
+    // Use secure random bytes for suffix
+    const suffix = crypto.randomBytes(6).toString('base64url');
+    return `${prefix}${Date.now()}${suffix}@example.com`;
   }
 
   /**
@@ -266,17 +268,18 @@ export class TestDataUtils {
     const symbols = '!@#$%^&*';
     
     let password = '';
-    password += lowercase[Math.floor(Math.random() * lowercase.length)];
-    password += uppercase[Math.floor(Math.random() * uppercase.length)];
-    password += numbers[Math.floor(Math.random() * numbers.length)];
-    password += symbols[Math.floor(Math.random() * symbols.length)];
+    password += lowercase[crypto.randomInt(lowercase.length)];
+    password += uppercase[crypto.randomInt(uppercase.length)];
+    password += numbers[crypto.randomInt(numbers.length)];
+    password += symbols[crypto.randomInt(symbols.length)];
     
     const allChars = lowercase + uppercase + numbers + symbols;
     for (let i = password.length; i < length; i++) {
-      password += allChars[Math.floor(Math.random() * allChars.length)];
+      password += allChars[crypto.randomInt(allChars.length)];
     }
     
-    return password.split('').sort(() => 0.5 - Math.random()).join('');
+    // Secure shuffle using Fisher-Yates and crypto
+    return TestDataUtils._secureShuffle(password.split('')).join('');
   }
 
   /**
@@ -289,6 +292,15 @@ export class TestDataUtils {
   }
 
   /**
+  // Secure shuffle helper
+  static _secureShuffle(array: any[]): any[] {
+    for (let i = array.length - 1; i > 0; i--) {
+      // Select a random index 0 <= j <= i
+      const j = crypto.randomInt(i + 1); 
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
    * Wait for a specified amount of time (useful for testing timeouts)
    */
   static async delay(ms: number): Promise<void> {
