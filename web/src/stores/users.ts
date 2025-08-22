@@ -163,15 +163,16 @@ export const useUsersStore = defineStore('users', () => {
       }
 
       const response = await apiClient.get('/users', { params });
+      const responseData = response.data as any; // Type assertion
       
-      users.value = response.data.data || response.data.items || [];
+      users.value = responseData.data || responseData.items || [];
       
-      if (response.data.pagination) {
+      if (responseData.pagination) {
         pagination.value = {
-          page: response.data.pagination.page || response.data.page,
-          size: response.data.pagination.size || response.data.size,
-          total: response.data.pagination.total || response.data.total,
-          totalPages: response.data.pagination.totalPages || response.data.totalPages
+          page: responseData.pagination.page || responseData.page,
+          size: responseData.pagination.size || responseData.size,
+          total: responseData.pagination.total || responseData.total,
+          totalPages: responseData.pagination.totalPages || responseData.totalPages
         };
       }
       
