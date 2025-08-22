@@ -37,7 +37,6 @@ import { resetBlacklist } from '../lib/token-blacklist';
 const { 
   verifyRefreshToken, 
   signAccessToken, 
-  signRefreshToken,
   setRefreshCookie,
   clearRefreshCookie,
 } = await import('../lib/auth');
