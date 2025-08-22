@@ -15,6 +15,8 @@ import { logger } from './lib/logger.js';
 import { withRequestLogging } from './lib/middleware/logging.js';
 import { errorTracker } from './lib/error-tracking.js';
 import { withDatabaseMonitoring } from './lib/performance-monitoring.js';
+import { businessMetrics } from './lib/business-metrics.js';
+import { securityMonitor, SecurityEventType } from './lib/security-monitor.js';
 
 const loginHandler = async (req: VercelRequest, res: VercelResponse) => {
   // Set CORS and security headers
@@ -93,6 +95,22 @@ const loginHandler = async (req: VercelRequest, res: VercelResponse) => {
     // Check if user exists and is active
     if (!user || !user.isActive) {
       recordAuthFailure(req, email);
+      
+      // Track security event
+      securityMonitor.recordSecurityEvent(
+        SecurityEventType.FAILED_LOGIN,
+        'login_endpoint',
+        { 
+          reason: !user ? 'user_not_found' : 'user_inactive',
+          email: email.toLowerCase()
+        },
+        {
+          email: email.toLowerCase(),
+          ip: clientIP,
+          userAgent
+        }
+      );
+      
       logger.security('Login failed - invalid credentials', {
         email: email.toLowerCase(),
         ip: clientIP,
@@ -109,6 +127,23 @@ const loginHandler = async (req: VercelRequest, res: VercelResponse) => {
     const isValidPassword = await verifyPassword(user.password, password);
     if (!isValidPassword) {
       recordAuthFailure(req, email);
+      
+      // Track failed login for security monitoring
+      securityMonitor.recordSecurityEvent(
+        SecurityEventType.FAILED_LOGIN,
+        'login_endpoint',
+        { 
+          reason: 'invalid_password',
+          email: user.email
+        },
+        {
+          userId: user.id,
+          email: user.email,
+          ip: clientIP,
+          userAgent
+        }
+      );
+      
       logger.security('Login failed - invalid password', {
         userId: user.id,
         email: user.email,
@@ -137,6 +172,22 @@ const loginHandler = async (req: VercelRequest, res: VercelResponse) => {
 
     // Record successful authentication
     recordAuthSuccess(req, user.email);
+    
+    // Track successful login in business metrics
+    businessMetrics.trackUserLogin(user.id, true, 'password', {
+      userId: user.id,
+      email: user.email,
+      ip: clientIP,
+      userAgent
+    });
+    
+    // Check for unusual activity
+    securityMonitor.detectUnusualActivity(user.id, {
+      userId: user.id,
+      email: user.email,
+      ip: clientIP,
+      userAgent
+    });
     
     // Log successful login
     logger.business('User login successful', {
