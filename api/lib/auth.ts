@@ -122,9 +122,39 @@ export function setCORSHeaders(res: VercelResponse): void {
 
 // Security headers
 export function setSecurityHeaders(res: VercelResponse): void {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Basic security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  
+  // Content Security Policy
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'", // Allow inline scripts for dev, restrict in production
+    "style-src 'self' 'unsafe-inline'",  // Allow inline styles
+    "img-src 'self' data: https:",       // Allow images from self, data URLs, and https
+    "font-src 'self' https:",            // Allow fonts from self and https
+    "connect-src 'self' https:",         // Allow connections to self and https
+    "frame-src 'none'",                  // Block frames
+    "object-src 'none'",                 // Block objects/embeds
+    "base-uri 'self'",                   // Restrict base URI
+    "form-action 'self'",                // Restrict form submissions
+    "upgrade-insecure-requests"          // Upgrade HTTP to HTTPS
+  ].join('; ');
+  
+  res.setHeader('Content-Security-Policy', csp);
+  
+  // Strict Transport Security (HTTPS only)
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  
+  // Additional security headers
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
 }

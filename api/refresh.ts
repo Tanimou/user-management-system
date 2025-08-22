@@ -10,6 +10,7 @@ import {
   setSecurityHeaders,
   type JWTPayload
 } from './lib/auth';
+import { createAuthRateLimit } from './lib/rate-limiter';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -24,6 +25,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST method
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Apply rate limiting for refresh requests (more lenient than login)
+  const rateLimitMiddleware = createAuthRateLimit({
+    windowMs: 15 * 60 * 1000,    // 15 minutes
+    maxRequests: 50,             // 50 refresh attempts per 15 minutes
+    maxFailures: 20,             // 20 failures before backoff
+    blockDurationMs: 60 * 1000   // 1 minute base block duration
+  });
+  if (!rateLimitMiddleware(req, res)) {
+    return; // Rate limit exceeded, response already sent
   }
 
   try {

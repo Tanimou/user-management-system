@@ -9,6 +9,7 @@ import {
   setSecurityHeaders,
   type JWTPayload
 } from './lib/auth';
+import { createAuthRateLimit, recordAuthFailure, recordAuthSuccess } from './lib/rate-limiter';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -23,6 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST method
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Apply rate limiting before processing login
+  const rateLimitMiddleware = createAuthRateLimit();
+  if (!rateLimitMiddleware(req, res)) {
+    return; // Rate limit exceeded, response already sent
   }
 
   try {
@@ -55,12 +62,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Check if user exists and is active
     if (!user || !user.isActive) {
+      recordAuthFailure(req, email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // Verify password
     const isValidPassword = await verifyPassword(user.password, password);
     if (!isValidPassword) {
+      recordAuthFailure(req, email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
@@ -77,6 +86,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Set refresh token cookie
     setRefreshCookie(res, refreshToken);
+
+    // Record successful authentication
+    recordAuthSuccess(req, user.email);
 
     // Return response (excluding password)
     const { password: _, ...userWithoutPassword } = user;
