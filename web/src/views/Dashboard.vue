@@ -1,369 +1,341 @@
 <template>
-  <div class="dashboard-container">
+  <div class="dashboard-layout">
     <!-- Header -->
-    <n-layout-header class="header">
-      <div class="header-content">
-        <h1>User Management System</h1>
+    <header class="dashboard-header">
+      <nav class="main-nav">
+        <div class="nav-brand">User Management</div>
+        <div class="nav-items">
+          <router-link 
+            v-if="isAdmin" 
+            to="/users" 
+            class="nav-item"
+            :class="{ active: $route.path === '/users' }"
+          >
+            Users
+          </router-link>
+          <router-link 
+            to="/profile" 
+            class="nav-item"
+            :class="{ active: $route.path === '/profile' }"
+          >
+            Profile
+          </router-link>
+        </div>
         <div class="user-menu">
+          <div class="user-info">
+            <n-avatar 
+              :size="32"
+              :src="user?.avatarUrl || defaultAvatar" 
+              :alt="user?.name"
+              round
+              class="user-avatar"
+            >
+              {{ user?.name?.charAt(0)?.toUpperCase() || 'U' }}
+            </n-avatar>
+            <span class="user-name">{{ user?.name || 'User' }}</span>
+            <n-tag 
+              :type="user?.roles?.includes('admin') ? 'success' : 'info'"
+              size="small"
+              class="role-badge"
+            >
+              {{ user?.roles?.includes('admin') ? 'Admin' : 'User' }}
+            </n-tag>
+          </div>
           <n-dropdown :options="userMenuOptions" @select="handleUserMenuSelect">
-            <n-button text>
-              <n-icon><PersonIcon /></n-icon>
-              {{ authStore.user?.name || 'User' }}
+            <n-button text class="logout-btn">
+              <template #icon>
+                <n-icon><SettingsOutline /></n-icon>
+              </template>
             </n-button>
           </n-dropdown>
         </div>
-      </div>
-    </n-layout-header>
+      </nav>
+    </header>
 
     <!-- Main Content -->
-    <n-layout class="main-layout">
-      <n-layout-content class="content">
-        <!-- Page Header -->
-        <div class="page-header">
-          <h2>Users</h2>
-          <div class="header-actions">
-            <n-tabs
-              v-model:value="activeTab"
-              type="segment"
-              @update:value="handleTabChange"
-              style="margin-right: 16px"
-            >
-              <n-tab-pane name="active" tab="Active Users" />
-              <n-tab-pane name="deactivated" tab="Deactivated Users" v-if="authStore.isAdmin" />
-            </n-tabs>
-            <n-button v-if="authStore.isAdmin" type="primary" @click="showCreateModal = true">
-              <template #icon>
-                <n-icon><AddIcon /></n-icon>
-              </template>
-              Create User
-            </n-button>
-          </div>
+    <main class="dashboard-content">
+      <!-- Breadcrumb Navigation -->
+      <div class="breadcrumb-nav">
+        <n-breadcrumb>
+          <n-breadcrumb-item>
+            <router-link to="/" class="breadcrumb-link">Dashboard</router-link>
+          </n-breadcrumb-item>
+          <n-breadcrumb-item v-if="$route.path === '/users'">
+            Users
+          </n-breadcrumb-item>
+          <n-breadcrumb-item v-if="$route.path === '/profile'">
+            Profile
+          </n-breadcrumb-item>
+        </n-breadcrumb>
+      </div>
+
+      <div class="content-header">
+        <h1>{{ pageTitle }}</h1>
+        <div class="action-buttons">
+          <n-button 
+            v-if="isAdmin && ($route.path === '/users' || $route.path === '/demo-admin')" 
+            @click="showAddUserModal = true"
+            type="primary"
+            class="btn-primary"
+          >
+            <template #icon>
+              <n-icon><Add /></n-icon>
+            </template>
+            Add User
+          </n-button>
         </div>
+      </div>
 
-        <!-- Filters -->
-
-        <n-card class="filters-card" v-if="activeTab === 'active'">
+      <!-- Admin: User Management Table -->
+      <div v-if="isAdmin && ($route.path === '/users' || $route.path === '/demo-admin')" class="user-management">
+        <div class="table-controls">
           <n-space>
             <n-input
-              v-model:value="filters.search"
-              placeholder="Search by name or email..."
+              v-model:value="searchQuery"
+              placeholder="Search users..."
               clearable
               style="width: 250px"
-              @input="debouncedSearch"
+              @input="handleSearch"
             >
               <template #prefix>
-                <n-icon><SearchIcon /></n-icon>
+                <n-icon><Search /></n-icon>
               </template>
             </n-input>
-
+            
             <n-select
-              v-model:value="filters.active"
-              placeholder="Status"
+              v-model:value="selectedRole"
+              placeholder="Filter by role"
               clearable
-              style="width: 120px"
-              :options="statusOptions"
-            />
-
-            <n-select
-              v-model:value="filters.role"
-              placeholder="Role"
-              clearable
-              style="width: 120px"
+              style="width: 150px"
               :options="roleOptions"
+              @update:value="handleRoleFilter"
             />
-
-            <n-date-picker
-              v-model:value="filters.createdFrom"
-              type="date"
-              placeholder="From Date"
+            
+            <n-select
+              v-model:value="selectedStatus"
+              placeholder="Filter by status"
               clearable
               style="width: 150px"
+              :options="statusOptions"
+              @update:value="handleStatusFilter"
             />
-
-            <n-date-picker
-              v-model:value="filters.createdTo"
-              type="date"
-              placeholder="To Date"
-              clearable
-              style="width: 150px"
-            />
-
-            <n-button @click="clearFilters" secondary> Clear Filters </n-button>
-
-            <n-button @click="loadUsers">
-              <template #icon>
-                <n-icon><RefreshIcon /></n-icon>
-              </template>
-              Refresh
-            </n-button>
           </n-space>
+        </div>
 
-          <!-- Active Filters Indicator -->
-          <div v-if="activeFiltersCount > 0" class="active-filters-indicator">
-            <n-text depth="3" style="font-size: 12px">
-              {{ activeFiltersCount }} filter{{ activeFiltersCount > 1 ? 's' : '' }} active
-            </n-text>
-          </div>
-        </n-card>
-
-        <!-- Deactivated Users Filters -->
-        <n-card class="filters-card" v-else-if="activeTab === 'deactivated'">
-          <n-space>
-            <n-input
-              v-model:value="filters.search"
-              placeholder="Search deactivated users..."
-              clearable
-              @input="debouncedSearch"
-            >
-              <template #prefix>
-                <n-icon><SearchIcon /></n-icon>
-              </template>
-            </n-input>
-
-            <n-button @click="loadUsers">
-              <template #icon>
-                <n-icon><RefreshIcon /></n-icon>
-              </template>
-              Refresh
-            </n-button>
-          </n-space>
-        </n-card>
-
-        <!-- Users Table -->
         <user-table
-          :users="users"
-          :loading="loading"
-          :sorting="sorting"
-          :show-deleted-column="activeTab === 'deactivated'"
-          @update:sorter="handleSorterChange"
-          @edit="handleEdit"
-          @delete="handleDelete"
-          @restore="handleRestore"
+          :users="usersStore.users"
+          :loading="usersStore.loading"
+          :sorting="{ sortBy: usersStore.sorting.column, sortOrder: usersStore.sorting.direction }"
+          @edit="handleEditUser"
+          @delete="handleDeleteUser"
+          @restore="handleRestoreUser"
+          @update:sorter="handleSort"
         />
-
-        <!-- Enhanced Pagination Controls -->
+        
         <pagination-controls
-          :current-page="paginationState.page.value"
-          :page-size="paginationState.size.value"
-          :total="total"
-          :total-pages="totalPages"
-          :start-item="startItem"
-          :end-item="endItem"
-          :loading="loading"
+          :current-page="usersStore.pagination.page"
+          :page-size="usersStore.pagination.size"
+          :total="usersStore.pagination.total"
+          :total-pages="usersStore.pagination.totalPages"
+          :start-item="(usersStore.pagination.page - 1) * usersStore.pagination.size + 1"
+          :end-item="Math.min(usersStore.pagination.page * usersStore.pagination.size, usersStore.pagination.total)"
+          :loading="usersStore.loading"
           @update:page="handlePageChange"
           @update:page-size="handlePageSizeChange"
         />
+      </div>
 
-        <!-- Create/Edit User Modal -->
-        <n-modal v-model:show="showCreateModal" preset="dialog" title="Create User">
-          <user-form :user="editingUser" @save="handleSaveUser" @cancel="handleCancelUser" />
-        </n-modal>
+      <!-- Regular User: Personal Dashboard -->
+      <div v-else class="personal-dashboard">
+        <div class="dashboard-cards">
+          <div class="card-row">
+            <div class="card-col">
+              <profile-summary-card 
+                :user="user" 
+                @edit-profile="handleEditProfile"
+              />
+            </div>
+            <div class="card-col">
+              <account-activity-card :user="user" />
+            </div>
+          </div>
+          <div class="card-row">
+            <div class="card-col card-col-full">
+              <quick-actions-card
+                @edit-profile="handleEditProfile"
+                @change-password="handleChangePassword"
+                @view-activity="handleViewActivity"
+                @view-help="handleViewHelp"
+                @contact-support="handleContactSupport"
+                @view-faq="handleViewFaq"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
 
-        <n-modal v-model:show="showEditModal" preset="dialog" title="Edit User">
-          <user-form :user="editingUser" @save="handleSaveUser" @cancel="handleCancelUser" />
-        </n-modal>
+    <!-- Modals -->
+    <n-modal 
+      v-model:show="showAddUserModal" 
+      preset="dialog" 
+      title="Create User"
+      style="width: 600px"
+    >
+      <user-form 
+        :user="null" 
+        @save="handleUserCreated" 
+        @cancel="showAddUserModal = false" 
+      />
+    </n-modal>
+    
+    <n-modal
+      v-model:show="showEditUserModal"
+      preset="dialog"
+      title="Edit User"
+      style="width: 600px"
+    >
+      <user-form
+        :user="editingUser"
+        @save="handleUserUpdated"
+        @cancel="showEditUserModal = false"
+      />
+    </n-modal>
 
-        <!-- User Profile Modal -->
-        <user-profile v-model:show="showProfileModal" @updated="handleProfileUpdated" />
-      </n-layout-content>
-    </n-layout>
+    <user-profile 
+      v-model:show="showProfileModal" 
+      @updated="handleProfileUpdated" 
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { ref, computed, onMounted, watch, h } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
 import {
-  PersonOutline as PersonIcon,
-  Add as AddIcon,
-  Search as SearchIcon,
-  Refresh as RefreshIcon,
+  SettingsOutline,
+  Add,
+  Search,
 } from '@vicons/ionicons5';
+
 import { useAuthStore, type User } from '@/stores/auth';
+import { useUsersStore } from '@/stores/users';
+
+// Components
+import UserTable from '@/components/UserTable.vue';
 import UserForm from '@/components/UserForm.vue';
 import UserProfile from '@/components/UserProfile.vue';
-import UserTable from '@/components/UserTable.vue';
 import PaginationControls from '@/components/PaginationControls.vue';
-import { usePaginationState } from '@/composables/usePaginationState';
-import { fromNaiveSortOrder } from '@/utils/sorting';
-import apiClient from '@/api/axios';
+import ProfileSummaryCard from '@/components/ProfileSummaryCard.vue';
+import AccountActivityCard from '@/components/AccountActivityCard.vue';
+import QuickActionsCard from '@/components/QuickActionsCard.vue';
 
-const router = useRouter();
+// Composables
 const route = useRoute();
+const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 const authStore = useAuthStore();
-const paginationState = usePaginationState();
-
-// Computed
-const activeFiltersCount = computed(() => {
-  let count = 0;
-  if (filters.search) count++;
-  if (filters.active !== undefined) count++;
-  if (filters.role) count++;
-  if (filters.createdFrom) count++;
-  if (filters.createdTo) count++;
-  return count;
-});
+const usersStore = useUsersStore();
 
 // State
-const users = ref<User[]>([]);
-const loading = ref(false);
-const showCreateModal = ref(false);
-const showEditModal = ref(false);
+const searchQuery = ref('');
+const selectedRole = ref('all');
+const selectedStatus = ref('all');
+const showAddUserModal = ref(false);
+const showEditUserModal = ref(false);
 const showProfileModal = ref(false);
 const editingUser = ref<User | null>(null);
-const activeTab = ref<'active' | 'deactivated'>('active');
 
-// Derived state for pagination display
-const total = ref(0);
-const totalPages = ref(1);
-const startItem = ref(0);
-const endItem = ref(0);
+// Computed
+const user = computed(() => authStore.user);
+const isAdmin = computed(() => user.value?.roles.includes('admin') ?? false);
 
-// Legacy filters - sync with pagination state
-const filters = reactive({
-  search: '',
-  active: undefined as boolean | undefined,
-  role: '' as string,
-  createdFrom: null as string | null,
-  createdTo: null as string | null,
+const defaultAvatar = computed(() => 
+  `https://api.dicebear.com/7.x/initials/svg?seed=${user.value?.name || 'User'}`
+);
+
+const pageTitle = computed(() => {
+  if (route.path === '/users' && isAdmin.value) return 'User Management';
+  if (route.path === '/profile') return 'Profile';
+  return 'Dashboard';
 });
 
-// Computed sorting object for UserTable props
-const sorting = computed(() => ({
-  sortBy: paginationState.sortBy.value,
-  sortOrder: paginationState.sortOrder.value,
-}));
-
-// Options
-const statusOptions = [
-  { label: 'Active', value: true },
-  { label: 'Inactive', value: false },
+const roleOptions = [
+  { value: 'all', label: 'All Roles' },
+  { value: 'user', label: 'Users' },
+  { value: 'admin', label: 'Admins' }
 ];
 
-const roleOptions = [
-  { label: 'User', value: 'user' },
-  { label: 'Admin', value: 'admin' },
+const statusOptions = [
+  { value: 'all', label: 'All Status' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' }
 ];
 
 const userMenuOptions = [
-  { label: 'Profile', key: 'profile' },
-  { label: 'Logout', key: 'logout' },
+  {
+    label: 'Profile',
+    key: 'profile',
+    icon: () => h('n-icon', null, { default: () => h(SettingsOutline) })
+  },
+  {
+    label: 'Logout',
+    key: 'logout',
+    icon: () => h('n-icon', null, { default: () => h(SettingsOutline) })
+  }
 ];
 
-// Debounced search with reduced timeout for better UX
-let searchTimeout: NodeJS.Timeout;
-const debouncedSearch = () => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    // The search change will be handled by the watcher automatically
-    loadUsers();
-  }, 300); // Reduced from 500ms for faster response
-};
-
-// Load users with enhanced pagination state
-async function loadUsers() {
-  loading.value = true;
-  try {
-    const params: any = {
-      page: paginationState.page.value,
-      size: paginationState.size.value,
-      orderBy: paginationState.sortBy.value,
-      order: paginationState.sortOrder.value,
-    };
-
-    if (filters.search) {
-      params.search = filters.search;
-    }
-
-    let endpoint = '/users';
-
-    if (activeTab.value === 'deactivated') {
-      endpoint = '/users/deactivated';
-      // For deactivated users, default sort by deletedAt desc
-      if (!params.orderBy || params.orderBy === 'createdAt') {
-        params.orderBy = 'deletedAt';
-        params.order = 'desc';
-        paginationState.setSorting('deletedAt', 'desc');
-      }
-    } else {
-      // For active users, apply active filter if set
-      if (filters.active !== undefined) {
-        params.active = filters.active;
-      }
-    }
-
-    const response = await apiClient.get(endpoint, { params });
-
-    users.value = response.data.data;
-    total.value = response.data.pagination.total;
-    totalPages.value = response.data.pagination.totalPages;
-    startItem.value = response.data.pagination.startItem || 0;
-    endItem.value = response.data.pagination.endItem || 0;
-  } catch (error: any) {
-    message.error(error.response?.data?.error || 'Failed to load users');
-  } finally {
-    loading.value = false;
-  }
+// Methods - Search and Filters
+function handleSearch() {
+  usersStore.setSearchQuery(searchQuery.value);
+  usersStore.loadUsers();
 }
 
-function handlePageChange(page: number) {
-  paginationState.setPage(page);
-  loadUsers();
+function handleRoleFilter() {
+  usersStore.setRoleFilter(selectedRole.value);
+  usersStore.loadUsers();
 }
 
-function handlePageSizeChange(pageSize: number) {
-  paginationState.setSize(pageSize);
-  loadUsers();
+function handleStatusFilter() {
+  usersStore.setStatusFilter(selectedStatus.value);  
+  usersStore.loadUsers();
 }
 
-function handleSorterChange(sorterInfo: any) {
-  if (!sorterInfo) return;
-
-  const { columnKey, order } = sorterInfo;
-  const sortBy = columnKey;
-  const sortOrder = fromNaiveSortOrder(order);
-
-  paginationState.setSorting(sortBy, sortOrder);
-  loadUsers();
-}
-
-function handleEdit(user: User) {
+// Methods - User Management
+function handleEditUser(user: User) {
   editingUser.value = user;
-  showEditModal.value = true;
+  showEditUserModal.value = true;
 }
 
-function handleDelete(user: User) {
+function handleDeleteUser(user: User) {
   dialog.warning({
     title: 'Confirm Delete',
-    content: `Are you sure you want to delete user "${user.name}"?`,
+    content: `Are you sure you want to deactivate ${user.name}?`,
     positiveText: 'Delete',
     negativeText: 'Cancel',
     onPositiveClick: async () => {
       try {
-        await apiClient.delete(`/users/${user.id}`);
-        message.success('User deleted successfully');
-        loadUsers();
+        await usersStore.deleteUser(user.id);
+        message.success('User deactivated successfully');
       } catch (error: any) {
-        message.error(error.response?.data?.error || 'Failed to delete user');
+        message.error(error.response?.data?.error || 'Failed to deactivate user');
       }
     },
   });
 }
 
-function handleRestore(user: User) {
+function handleRestoreUser(user: User) {
   dialog.info({
     title: 'Confirm Restore',
-    content: `Are you sure you want to restore user "${user.name}"?`,
+    content: `Are you sure you want to restore ${user.name}?`,
     positiveText: 'Restore',
     negativeText: 'Cancel',
     onPositiveClick: async () => {
       try {
-        await apiClient.post(`/users/${user.id}`, { action: 'restore' });
+        await usersStore.restoreUser(user.id);
         message.success('User restored successfully');
-        loadUsers();
       } catch (error: any) {
         message.error(error.response?.data?.error || 'Failed to restore user');
       }
@@ -371,294 +343,383 @@ function handleRestore(user: User) {
   });
 }
 
-function handleTabChange(value: 'active' | 'deactivated') {
-  activeTab.value = value;
-  // Reset filters when switching tabs
-  filters.search = '';
-  filters.active = undefined;
-  paginationState.setPage(1);
-
-  // Reset sorting for deactivated tab
-  if (value === 'deactivated') {
-    paginationState.setSorting('deletedAt', 'desc');
-  } else {
-    paginationState.setSorting('createdAt', 'desc');
-  }
-
-  loadUsers();
+function handleSort(sorterInfo: any) {
+  if (!sorterInfo) return;
+  const { columnKey, order } = sorterInfo;
+  const sortOrder = order === 'ascend' ? 'asc' : 'desc';
+  usersStore.setSorting(columnKey, sortOrder);
+  usersStore.loadUsers();
 }
 
-async function handleSaveUser(userData: any) {
+function handlePageChange(page: number) {
+  usersStore.setPage(page);
+  usersStore.loadUsers();
+}
+
+function handlePageSizeChange(pageSize: number) {
+  usersStore.setPageSize(pageSize);
+  usersStore.loadUsers();
+}
+
+// Methods - User CRUD
+async function handleUserCreated(userData: any) {
   try {
-    if (editingUser.value) {
-      // Update existing user
-      await apiClient.put(`/users/${editingUser.value.id}`, userData);
-      message.success('User updated successfully');
-    } else {
-      // Create new user
-      await apiClient.post('/users', userData);
-      message.success('User created successfully');
-    }
-
-    showCreateModal.value = false;
-    showEditModal.value = false;
-    editingUser.value = null;
-    loadUsers();
+    await usersStore.createUser(userData);
+    message.success('User created successfully');
+    showAddUserModal.value = false;
   } catch (error: any) {
-    message.error(error.response?.data?.error || 'Failed to save user');
+    message.error(error.response?.data?.error || 'Failed to create user');
   }
 }
 
-function handleCancelUser() {
-  showCreateModal.value = false;
-  showEditModal.value = false;
-  editingUser.value = null;
+async function handleUserUpdated(userData: any) {
+  if (!editingUser.value) return;
+  
+  try {
+    await usersStore.updateUser(editingUser.value.id, userData);
+    message.success('User updated successfully');
+    showEditUserModal.value = false;
+    editingUser.value = null;
+  } catch (error: any) {
+    message.error(error.response?.data?.error || 'Failed to update user');
+  }
 }
 
-function handleUserMenuSelect(key: string) {
-  if (key === 'logout') {
-    authStore.logout();
-    router.push('/login');
-  } else if (key === 'profile') {
-    showProfileModal.value = true;
-  }
+// Methods - Profile Actions
+function handleEditProfile() {
+  showProfileModal.value = true;
 }
 
 function handleProfileUpdated() {
-  // Profile was updated successfully, no need to reload users list
-  // The auth store is automatically updated
+  message.success('Profile updated successfully');
 }
 
-// Initialize filters from URL parameters
-function initializeFromURL() {
-  const query = route.query;
+function handleChangePassword() {
+  showProfileModal.value = true;
+}
 
-  if (query.search) {
-    filters.search = query.search as string;
-  }
+// Placeholder methods for quick actions
+function handleViewActivity() {
+  message.info('Activity view coming soon!');
+}
 
-  if (query.active !== undefined) {
-    filters.active = query.active === 'true' ? true : query.active === 'false' ? false : undefined;
-  }
+function handleViewHelp() {
+  message.info('Help documentation coming soon!');
+}
 
-  if (query.role) {
-    filters.role = query.role as string;
-  }
+function handleContactSupport() {
+  message.info('Support contact coming soon!');
+}
 
-  if (query.orderBy) {
-    paginationState.setSorting(query.orderBy as string, (query.order as 'asc' | 'desc') || 'asc');
-  }
+function handleViewFaq() {
+  message.info('FAQ coming soon!');
+}
 
-  if (query.page) {
-    paginationState.setPage(parseInt(query.page as string) || 1);
-  }
-
-  if (query.size) {
-    paginationState.setSize(parseInt(query.size as string) || 10);
-  }
-
-  // Handle date filters (from timestamp to Date object)
-  if (query.createdFrom) {
-    filters.createdFrom = new Date(query.createdFrom as string).toISOString();
-  }
-
-  if (query.createdTo) {
-    filters.createdTo = new Date(query.createdTo as string).toISOString();
+// Methods - Menu Actions
+function handleUserMenuSelect(key: string) {
+  if (key === 'profile') {
+    router.push('/profile');
+  } else if (key === 'logout') {
+    authStore.logout();
+    router.push('/login');
   }
 }
 
-// Clear all filters
-function clearFilters() {
-  filters.search = '';
-  filters.active = undefined;
-  filters.role = '';
-  filters.createdFrom = null;
-  filters.createdTo = null;
-  paginationState.setPage(1);
-  loadUsers();
-}
-
-// Watch filters
-watch(
-  () => filters.active,
-  () => {
-    paginationState.setPage(1);
-    loadUsers();
+// Watchers & Lifecycle
+watch(() => route.path, () => {
+  // Load users when navigating to users page
+  if (route.path === '/users' && isAdmin.value) {
+    usersStore.loadUsers();
   }
-);
+});
 
-watch(
-  () => filters.role,
-  () => {
-    paginationState.setPage(1);
-    loadUsers();
-  }
-);
-
-watch(
-  () => filters.createdFrom,
-  () => {
-    paginationState.setPage(1);
-    loadUsers();
-  }
-);
-
-watch(
-  () => filters.createdTo,
-  () => {
-    paginationState.setPage(1);
-    loadUsers();
-  }
-);
-
-// Initialize
 onMounted(() => {
-  initializeFromURL();
-  loadUsers();
+  // Handle demo mode
+  if (route.meta.demo) {
+    const demoUser: User = route.meta.demo === 'admin' 
+      ? {
+          id: 2,
+          name: 'Admin Demo',
+          email: 'admin@demo.com',
+          roles: ['admin', 'user'],
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      : {
+          id: 1,
+          name: 'User Demo',
+          email: 'user@demo.com',
+          roles: ['user'],
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+    
+    localStorage.setItem('accessToken', 'demo-token');
+    authStore.setDemoUser(demoUser);
+  }
+
+  // Load users if on users page and user is admin
+  if ((route.path === '/users' || route.path === '/demo-admin') && isAdmin.value) {
+    usersStore.loadUsers();
+  }
 });
 </script>
 
 <style scoped>
-.dashboard-container {
-  height: 100vh;
+.dashboard-layout {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.header {
-  border-bottom: 1px solid #e0e0e6;
-  padding: 0 24px;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 64px;
-}
-
-.header-content h1 {
-  margin: 0;
-  color: #333;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.main-layout {
-  flex: 1;
   background: #f5f5f5;
 }
 
-.content {
-  padding: 24px;
+/* Header Styles */
+.dashboard-header {
+  background: white;
+  border-bottom: 1px solid #e0e0e6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 64px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-header h2 {
-  margin: 0;
-  color: #333;
-  font-size: 24px;
+.nav-brand {
+  font-size: 20px;
   font-weight: 600;
+  color: #333;
 }
 
-.header-actions {
+.nav-items {
+  display: flex;
+  gap: 32px;
+}
+
+.nav-item {
+  text-decoration: none;
+  color: #666;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  color: #2080f0;
+  background: #f0f4ff;
+}
+
+.nav-item.active {
+  color: #2080f0;
+  background: #f0f4ff;
+}
+
+.user-menu {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.filters-card {
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.role-badge {
+  flex-shrink: 0;
+}
+
+.logout-btn {
+  color: #666;
+}
+
+/* Content Styles */
+.dashboard-content {
+  flex: 1;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.breadcrumb-nav {
   margin-bottom: 24px;
 }
 
-.active-filters-indicator {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+.breadcrumb-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.content-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+/* User Management Styles */
+.user-management {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table-controls {
+  margin-bottom: 24px;
+}
+
+/* Personal Dashboard Styles */
+.personal-dashboard {
+  flex: 1;
+}
+
+.dashboard-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.card-row {
+  display: flex;
+  gap: 24px;
+}
+
+.card-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-col-full {
+  flex: none;
+  width: 100%;
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .main-nav {
+    padding: 0 16px;
+  }
+  
+  .dashboard-content {
+    padding: 16px;
+  }
+  
+  .card-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
 @media (max-width: 768px) {
-  .filters-card :deep(.n-space) {
+  .main-nav {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  
+  .nav-items {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    gap: 16px;
+  }
+  
+  .user-info .user-name {
+    display: none;
+  }
+  
+  .content-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .content-header h1 {
+    font-size: 24px;
+  }
+  
+  .dashboard-content {
+    padding: 12px;
+  }
+  
+  .user-management {
+    padding: 16px;
+  }
+  
+  .table-controls :deep(.n-space) {
     flex-direction: column;
     align-items: stretch;
   }
-
-  .filters-card :deep(.n-space .n-space-item) {
+  
+  .table-controls :deep(.n-space .n-space-item) {
     margin-right: 0 !important;
     margin-bottom: 8px;
   }
-
-  .filters-card :deep(.n-input),
-  .filters-card :deep(.n-select),
-  .filters-card :deep(.n-date-picker) {
+  
+  .table-controls :deep(.n-input),
+  .table-controls :deep(.n-select) {
     width: 100% !important;
-  }
-
-  .header-content {
-    padding: 0 16px;
-    height: 56px;
-  }
-
-  .header-content h1 {
-    font-size: 18px;
-  }
-
-  .content {
-    padding: 16px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-    margin-bottom: 16px;
-  }
-
-  .page-header h2 {
-    font-size: 20px;
-  }
-
-  .header-actions {
-    width: 100%;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .filters-card {
-    margin-bottom: 16px;
-  }
-
-  .filters-card :deep(.n-card__content) {
-    padding: 16px;
   }
 }
 
 @media (max-width: 480px) {
-  .header-content h1 {
-    font-size: 16px;
-  }
-
-  .content {
-    padding: 12px;
-  }
-
-  .page-header h2 {
+  .nav-brand {
     font-size: 18px;
   }
-
-  .filters-card :deep(.n-card__content) {
+  
+  .main-nav {
+    padding: 8px 12px;
+  }
+  
+  .dashboard-content {
+    padding: 8px;
+  }
+  
+  .content-header h1 {
+    font-size: 20px;
+  }
+  
+  .user-management {
     padding: 12px;
+  }
+  
+  .dashboard-cards {
+    gap: 16px;
   }
 }
 </style>

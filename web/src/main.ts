@@ -22,6 +22,31 @@ const routes = [
     component: Dashboard,
     meta: { requiresAuth: true }
   },
+  { 
+    path: '/users', 
+    name: 'Users', 
+    component: Dashboard,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  { 
+    path: '/profile', 
+    name: 'Profile', 
+    component: Dashboard,
+    meta: { requiresAuth: true }
+  },
+  // Demo routes without auth for testing
+  { 
+    path: '/demo-user', 
+    name: 'DemoUser', 
+    component: Dashboard,
+    meta: { demo: 'user' }
+  },
+  { 
+    path: '/demo-admin', 
+    name: 'DemoAdmin', 
+    component: Dashboard,
+    meta: { demo: 'admin' }
+  },
   // Redirect /dashboard to /
   { 
     path: '/dashboard', 
@@ -48,9 +73,18 @@ app.use(naive);
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
+  // Temporarily disable auth checks for demo - comment out for production
+  if (to.path.startsWith('/demo-')) {
+    next();
+    return;
+  }
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login');
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    next('/');
+  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    // Redirect non-admin users trying to access admin routes
     next('/');
   } else {
     next();
