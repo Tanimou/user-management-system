@@ -50,13 +50,12 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     } = req.query;
 
     // Parse and validate pagination parameters
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    let pageNum = Math.max(1, parseInt(page as string) || 1);
     const pageSize = Math.min(50, Math.max(1, parseInt(size as string) || 10));
-    const skip = (pageNum - 1) * pageSize;
-
-    // Build where clause
+    
+    // Calculate total first to validate page number
     const where: any = {};
-
+    
     // Handle search (OR on name and email)
     if (search && typeof search === 'string') {
       where.OR = [
@@ -71,29 +70,46 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     }
 
     // Handle role filter
-    if (role && typeof role === 'string' && (role === 'user' || role === 'admin')) {
-      where.roles = { has: role };
+    if (role && typeof role === 'string') {
+      const validRoles = ['user', 'admin'];
+      if (validRoles.includes(role)) {
+        where.roles = { has: role };
+      }
     }
 
-    // Handle date range filter
-    const dateRangeFilter: any = {};
+    // Handle date range filtering
+    const createdAtFilter: any = {};
     if (createdFrom && typeof createdFrom === 'string') {
-      const fromDate = new Date(createdFrom);
-      if (!isNaN(fromDate.getTime())) {
-        dateRangeFilter.gte = fromDate;
+      try {
+        createdAtFilter.gte = new Date(createdFrom);
+      } catch (error) {
+        // Invalid date format, ignore
       }
     }
     if (createdTo && typeof createdTo === 'string') {
-      const toDate = new Date(createdTo);
-      if (!isNaN(toDate.getTime())) {
-        // Set to end of day for inclusive filtering
+      try {
+        // Set to end of day for the "to" date
+        const toDate = new Date(createdTo);
         toDate.setHours(23, 59, 59, 999);
-        dateRangeFilter.lte = toDate;
+        createdAtFilter.lte = toDate;
+      } catch (error) {
+        // Invalid date format, ignore
       }
     }
-    if (Object.keys(dateRangeFilter).length > 0) {
-      where.createdAt = dateRangeFilter;
+    if (Object.keys(createdAtFilter).length > 0) {
+      where.createdAt = createdAtFilter;
     }
+
+    // Get total count first for page validation
+    const total = await prisma.user.count({ where });
+    const maxPages = Math.max(1, Math.ceil(total / pageSize));
+    
+    // Ensure page number doesn't exceed available pages
+    if (pageNum > maxPages) {
+      pageNum = maxPages;
+    }
+    
+    const skip = (pageNum - 1) * pageSize;
 
     // Handle sorting
     const validOrderBy = ['name', 'email', 'createdAt', 'updatedAt'];
@@ -102,28 +118,27 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     const sortField = validOrderBy.includes(orderBy as string) ? (orderBy as string) : 'createdAt';
     const sortOrder = validOrder.includes(order as string) ? (order as string) : 'desc';
 
-    // Execute queries
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-          avatarUrl: true,
-        },
-        orderBy: { [sortField]: sortOrder },
-        skip,
-        take: pageSize,
-      }),
-      prisma.user.count({ where }),
-    ]);
+    // Execute user query (total count already retrieved above)
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        avatarUrl: true,
+      },
+      orderBy: { [sortField]: sortOrder },
+      skip,
+      take: pageSize,
+    });
 
-    const totalPages = Math.ceil(total / pageSize);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const startItem = total === 0 ? 0 : skip + 1;
+    const endItem = Math.min(skip + pageSize, total);
 
     return res.status(200).json({
       data: users,
@@ -134,6 +149,8 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
         totalPages,
         hasNext: pageNum < totalPages,
         hasPrev: pageNum > 1,
+        startItem,
+        endItem,
       },
     });
   } catch (error) {
