@@ -165,7 +165,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (user.value) {
       user.value = { ...user.value, ...userData };
     }
+  }
 
+  function setDemoUser(demoUser: User) {
+    user.value = demoUser;
   }
 
   return {
@@ -182,6 +185,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchProfile,
     updateProfile,
     updateUser,
-
+    setDemoUser
   };
 });
