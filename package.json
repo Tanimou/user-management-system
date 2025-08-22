@@ -10,8 +10,14 @@
   "scripts": {
     "dev:frontend": "npm run dev --workspace=web",
     "dev:api": "vercel dev",
-    "build": "npm run build --workspace=web",
+    "build": "npm run build:web && npm run build:api",
+    "build:web": "npm run build --workspace=web",
     "build:api": "npm run build --workspace=api",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel",
+    "migrate:prod": "tsx scripts/migrate-production.ts",
+    "postdeploy": "npm run migrate:prod",
+    "generate:secrets": "node scripts/generate-secrets.js",
     "db:migrate": "npm run db:migrate --workspace=api",
     "db:generate": "npm run db:generate --workspace=api",
     "db:studio": "npm run db:studio --workspace=api"
@@ -28,6 +34,7 @@
   "author": "Development Team",
   "license": "MIT",
   "devDependencies": {
+    "tsx": "^4.20.4",
     "vitest": "^3.2.4"
   }
 }
