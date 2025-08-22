@@ -101,7 +101,8 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     }
 
     // Get total count first for page validation
-    let total = await prisma.user.count({ where });
+    // Get total count first for page validation
+    const total = await prisma.user.count({ where });
     const maxPages = Math.max(1, Math.ceil(total / pageSize));
     
     // Ensure page number doesn't exceed available pages
@@ -120,27 +121,23 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
 
 
     // Execute queries
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-          deletedAt: true,
-          avatarUrl: true,
-        },
-        orderBy: { [sortField]: sortOrder },
-        skip,
-        take: pageSize,
-      }),
-      prisma.user.count({ where }),
-    ]);
-
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+        avatarUrl: true,
+      },
+      orderBy: { [sortField]: sortOrder },
+      skip,
+      take: pageSize,
+    });
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const startItem = total === 0 ? 0 : skip + 1;
