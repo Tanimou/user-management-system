@@ -7,6 +7,7 @@ import {
   type AuthenticatedRequest,
 } from './lib/auth.js';
 import prisma from './lib/prisma.js';
+import { validatePasswordPolicy, validateName } from './lib/validation.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -78,8 +79,13 @@ async function handleUpdateProfile(req: AuthenticatedRequest, res: VercelRespons
 
     // Handle password update
     if (password !== undefined) {
-      if (typeof password !== 'string' || password.length < 8) {
-        return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+      const passwordValidation = validatePasswordPolicy(password);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({ 
+          error: 'Password does not meet policy requirements',
+          details: passwordValidation.errors,
+          code: 'INVALID_PASSWORD_POLICY'
+        });
       }
       updateData.password = await hashPassword(password);
     }

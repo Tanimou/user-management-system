@@ -158,7 +158,7 @@ describe('Users API - POST /api/users', () => {
       body: {
         name: 'New User',
         email: 'new@example.com',
-        password: 'password123',
+        password: 'Password123!',
         roles: ['user']
       }
     });
@@ -178,7 +178,7 @@ describe('Users API - POST /api/users', () => {
 
     const req = createMockRequest('POST', {}, {
       user: { userId: 1, roles: ['user'] },
-      body: { name: 'Test', email: 'test@example.com', password: 'password123' }
+      body: { name: 'Test', email: 'test@example.com', password: 'Password123!' }
     });
     const res = createMockResponse();
 
@@ -215,7 +215,13 @@ describe('Users API - POST /api/users', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Password must be at least 8 characters long' });
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Password does not meet policy requirements',
+      details: expect.arrayContaining([
+        'Password must be at least 8 characters long'
+      ]),
+      code: 'INVALID_PASSWORD_POLICY'
+    });
   });
 
   it('should validate roles array', async () => {
@@ -224,7 +230,7 @@ describe('Users API - POST /api/users', () => {
       body: {
         name: 'Test',
         email: 'test@example.com',
-        password: 'password123',
+        password: 'Password123!',
         roles: ['admin'] // Missing required 'user' role
       }
     });
@@ -245,7 +251,7 @@ describe('Users API - POST /api/users', () => {
       body: {
         name: 'New User',
         email: 'existing@example.com',
-        password: 'password123'
+        password: 'Password123!'
       }
     });
     const res = createMockResponse();
@@ -268,7 +274,7 @@ describe('Users API - POST /api/users', () => {
       body: {
         name: 'Reactivated',
         email: 'deleted@example.com',
-        password: 'password123'
+        password: 'Password123!'
       }
     });
     const res = createMockResponse();

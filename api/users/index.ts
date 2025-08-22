@@ -8,6 +8,7 @@ import {
   type AuthenticatedRequest,
 } from '../lib/auth.js';
 import prisma from '../lib/prisma.js';
+import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -120,21 +121,39 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
 
     const { name, email, password, roles = ['user'] } = req.body;
 
-    // Validate input
+    // Validate input using enhanced validation
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
 
-    if (typeof name !== 'string' || name.length > 120) {
-      return res.status(400).json({ error: 'Name must be a string with max 120 characters' });
+    // Validate name
+    const nameValidation = validateName(name);
+    if (!nameValidation.isValid) {
+      return res.status(400).json({ 
+        error: 'Invalid name',
+        details: nameValidation.errors,
+        code: 'INVALID_NAME'
+      });
     }
 
-    if (typeof email !== 'string' || email.length > 180) {
-      return res.status(400).json({ error: 'Email must be a string with max 180 characters' });
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      return res.status(400).json({ 
+        error: 'Invalid email',
+        details: emailValidation.errors,
+        code: 'INVALID_EMAIL'
+      });
     }
 
-    if (typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    // Validate password policy
+    const passwordValidation = validatePasswordPolicy(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        error: 'Password does not meet policy requirements',
+        details: passwordValidation.errors,
+        code: 'INVALID_PASSWORD_POLICY'
+      });
     }
 
     if (!Array.isArray(roles) || !roles.includes('user')) {

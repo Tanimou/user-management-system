@@ -122,13 +122,13 @@ describe('User Profile API - PUT /api/me', () => {
 
     const req = createMockRequest('PUT', {}, {
       user: { userId: 1, roles: ['user'] },
-      body: { password: 'newpassword123' }
+      body: { password: 'NewPassword123!' }
     });
     const res = createMockResponse();
 
     await handler(req, res);
 
-    expect(hashPassword).toHaveBeenCalledWith('newpassword123');
+    expect(hashPassword).toHaveBeenCalledWith('NewPassword123!');
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: { password: 'new-hashed-password' },
@@ -142,7 +142,7 @@ describe('User Profile API - PUT /api/me', () => {
 
     const req = createMockRequest('PUT', {}, {
       user: { userId: 1, roles: ['user'] },
-      body: { name: 'New Name', password: 'newpassword123' }
+      body: { name: 'New Name', password: 'NewPassword123!' }
     });
     const res = createMockResponse();
 
@@ -180,7 +180,13 @@ describe('User Profile API - PUT /api/me', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Password must be at least 8 characters long' });
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Password does not meet policy requirements',
+      details: expect.arrayContaining([
+        'Password must be at least 8 characters long'
+      ]),
+      code: 'INVALID_PASSWORD_POLICY'
+    });
   });
 
   it('should trim whitespace from name', async () => {

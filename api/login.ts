@@ -10,6 +10,7 @@ import {
 } from './lib/auth.js';
 import prisma from "./lib/prisma.js";
 import { createAuthRateLimit, recordAuthFailure, recordAuthSuccess } from './lib/rate-limiter.js';
+import { validatePasswordPolicy } from './lib/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -46,10 +47,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .json({ error: "Invalid email or password format" });
     }
 
-    // Validate password minimum length (8+ characters)
-    if (password.length < 8) {
+    // Validate password policy (enhanced validation)
+    const policyValidation = validatePasswordPolicy(password);
+    if (!policyValidation.isValid) {
       return res.status(400).json({ 
-        error: "Password must be at least 8 characters long" 
+        error: 'Password does not meet policy requirements',
+        details: policyValidation.errors,
+        code: 'INVALID_PASSWORD_POLICY'
       });
     }
 
