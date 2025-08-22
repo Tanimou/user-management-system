@@ -1,313 +1,239 @@
 <template>
-  <div class="password-strength-meter" v-if="password">
-    <!-- Strength Bar -->
-    <div class="strength-bar-container">
-      <div class="strength-bar">
-        <div 
-          class="strength-fill" 
-          :class="strengthClass"
-          :style="{ width: `${score}%` }"
-        />
-      </div>
-      <n-text :depth="2" class="strength-text">
-        {{ strengthLabel }}
-      </n-text>
-    </div>
 
-    <!-- Feedback Messages -->
-    <div v-if="feedback.length > 0" class="feedback-container">
-      <n-text :depth="3" style="font-size: 12px">
-        Suggestions:
-      </n-text>
-      <ul class="feedback-list">
-        <li v-for="message in feedback" :key="message" class="feedback-item">
-          <n-text :depth="3" style="font-size: 12px">{{ message }}</n-text>
-        </li>
-      </ul>
+  <div v-if="password" class="password-strength">
+    <div class="strength-bar">
+      <div 
+        class="strength-fill" 
+        :class="strengthClass"
+        :style="{ width: strengthPercentage + '%' }"
+      ></div>
     </div>
-
-    <!-- Password Requirements -->
-    <div class="requirements-container">
-      <n-text :depth="3" style="font-size: 12px; margin-bottom: 4px; display: block">
-        Password Requirements:
-      </n-text>
-      <div class="requirements-grid">
-        <div class="requirement-item" :class="{ met: meetsMinLength }">
-          <n-icon :color="meetsMinLength ? '#18a058' : '#d03050'">
-            <component :is="meetsMinLength ? CheckmarkIcon : CloseIcon" />
+    <div class="strength-info">
+      <span class="strength-label" :class="strengthClass">
+        {{ strengthText }}
+      </span>
+    </div>
+    <div class="requirements" v-if="showRequirements">
+      <p class="requirements-title">Password Requirements:</p>
+      <ul class="requirements-list">
+        <li :class="{ met: hasMinLength }">
+          <n-icon :size="14">
+            <component :is="hasMinLength ? CheckmarkIcon : CloseIcon" />
           </n-icon>
-          <n-text :depth="meetsMinLength ? 1 : 3" style="font-size: 12px">
-            At least 8 characters
-          </n-text>
-        </div>
-        <div class="requirement-item" :class="{ met: hasUppercase }">
-          <n-icon :color="hasUppercase ? '#18a058' : '#d03050'">
+          At least 8 characters
+        </li>
+        <li :class="{ met: hasUppercase }">
+          <n-icon :size="14">
             <component :is="hasUppercase ? CheckmarkIcon : CloseIcon" />
           </n-icon>
-          <n-text :depth="hasUppercase ? 1 : 3" style="font-size: 12px">
-            Uppercase letter
-          </n-text>
-        </div>
-        <div class="requirement-item" :class="{ met: hasLowercase }">
-          <n-icon :color="hasLowercase ? '#18a058' : '#d03050'">
+          At least one uppercase letter
+        </li>
+        <li :class="{ met: hasLowercase }">
+          <n-icon :size="14">
             <component :is="hasLowercase ? CheckmarkIcon : CloseIcon" />
           </n-icon>
-          <n-text :depth="hasLowercase ? 1 : 3" style="font-size: 12px">
-            Lowercase letter
-          </n-text>
-        </div>
-        <div class="requirement-item" :class="{ met: hasNumber }">
-          <n-icon :color="hasNumber ? '#18a058' : '#d03050'">
+          At least one lowercase letter
+        </li>
+        <li :class="{ met: hasNumber }">
+          <n-icon :size="14">
             <component :is="hasNumber ? CheckmarkIcon : CloseIcon" />
           </n-icon>
-          <n-text :depth="hasNumber ? 1 : 3" style="font-size: 12px">
-            Number
-          </n-text>
-        </div>
-        <div class="requirement-item" :class="{ met: hasSpecialChar }">
-          <n-icon :color="hasSpecialChar ? '#18a058' : '#d03050'">
-            <component :is="hasSpecialChar ? CheckmarkIcon : CloseIcon" />
+          At least one number
+        </li>
+        <li :class="{ met: hasSpecial }">
+          <n-icon :size="14">
+            <component :is="hasSpecial ? CheckmarkIcon : CloseIcon" />
           </n-icon>
-          <n-text :depth="hasSpecialChar ? 1 : 3" style="font-size: 12px">
-            Special character
-          </n-text>
-        </div>
-      </div>
+          At least one special character
+        </li>
+      </ul>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
-import { useMessage } from 'naive-ui';
-import { Checkmark as CheckmarkIcon, Close as CloseIcon } from '@vicons/ionicons5';
-import apiClient from '@/api/axios';
+import { computed } from 'vue';
+import { CheckmarkOutline as CheckmarkIcon, CloseOutline as CloseIcon } from '@vicons/ionicons5';
 
 interface Props {
   password: string;
+  showRequirements?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  showRequirements: true
+});
 
-const message = useMessage();
-const loading = ref(false);
-const score = ref(0);
-const strength = ref<'weak' | 'fair' | 'good' | 'strong'>('weak');
-const feedback = ref<string[]>([]);
-const isValid = ref(false);
-
-// Computed properties for requirements
-const meetsMinLength = computed(() => props.password.length >= 8);
+// Password strength criteria
+const hasMinLength = computed(() => props.password.length >= 8);
 const hasUppercase = computed(() => /[A-Z]/.test(props.password));
 const hasLowercase = computed(() => /[a-z]/.test(props.password));
-const hasNumber = computed(() => /[0-9]/.test(props.password));
-const hasSpecialChar = computed(() => /[^a-zA-Z0-9]/.test(props.password));
+const hasNumber = computed(() => /\d/.test(props.password));
+const hasSpecial = computed(() => /[!@#$%^&*(),.?":{}|<>]/.test(props.password));
 
-const strengthClass = computed(() => ({
-  'strength-weak': strength.value === 'weak',
-  'strength-fair': strength.value === 'fair', 
-  'strength-good': strength.value === 'good',
-  'strength-strong': strength.value === 'strong',
-}));
-
-const strengthLabel = computed(() => {
-  const labels = {
-    weak: 'Weak',
-    fair: 'Fair',
-    good: 'Good', 
-    strong: 'Strong'
-  };
-  return labels[strength.value];
-});
-
-// Debounced password validation
-let validationTimeout: NodeJS.Timeout;
-
-const validatePassword = async (password: string) => {
-  if (!password) {
-    score.value = 0;
-    strength.value = 'weak';
-    feedback.value = [];
-    isValid.value = false;
-    return;
-  }
-
-  loading.value = true;
-  try {
-    const response = await apiClient.post('/validate-password', { password });
-    const result = response.data;
-    
-    score.value = result.score;
-    strength.value = result.strength;
-    feedback.value = result.feedback || [];
-    isValid.value = result.isValid;
-  } catch (error) {
-    console.error('Password validation error:', error);
-    // Fallback to basic client-side validation
-    score.value = calculateBasicScore(password);
-    strength.value = getBasicStrength(score.value);
-    feedback.value = ['Unable to validate password strength'];
-    isValid.value = password.length >= 8;
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Basic client-side fallback validation
-const calculateBasicScore = (password: string): number => {
+// Calculate strength score
+const strengthScore = computed(() => {
   let score = 0;
+  if (hasMinLength.value) score++;
+  if (hasUppercase.value) score++;
+  if (hasLowercase.value) score++;
+  if (hasNumber.value) score++;
+  if (hasSpecial.value) score++;
   
-  if (password.length >= 8) score += 25;
-  if (password.length >= 12) score += 10;
-  if (/[A-Z]/.test(password)) score += 15;
-  if (/[a-z]/.test(password)) score += 15;
-  if (/[0-9]/.test(password)) score += 15;
-  if (/[^a-zA-Z0-9]/.test(password)) score += 20;
+  // Bonus points for longer passwords
+  if (props.password.length >= 12) score += 0.5;
+  if (props.password.length >= 16) score += 0.5;
   
-  return Math.min(100, score);
-};
-
-const getBasicStrength = (score: number): 'weak' | 'fair' | 'good' | 'strong' => {
-  if (score < 40) return 'weak';
-  if (score < 65) return 'fair';
-  if (score < 80) return 'good';
-  return 'strong';
-};
-
-const debouncedValidate = (password: string) => {
-  clearTimeout(validationTimeout);
-  validationTimeout = setTimeout(() => {
-    validatePassword(password);
-  }, 300);
-};
-
-// Watch for password changes
-watch(() => props.password, debouncedValidate, { immediate: true });
-
-// Expose validation state for parent component
-defineExpose({
-  isValid: computed(() => isValid.value),
-  score: computed(() => score.value),
-  strength: computed(() => strength.value),
+  return Math.min(score, 5);
 });
+
+// Strength percentage (0-100)
+const strengthPercentage = computed(() => (strengthScore.value / 5) * 100);
+
+// Strength classification
+const strengthLevel = computed(() => {
+  const score = strengthScore.value;
+  if (score < 2) return 'weak';
+  if (score < 3.5) return 'fair';
+  if (score < 4.5) return 'good';
+  return 'strong';
+});
+
+const strengthText = computed(() => {
+  switch (strengthLevel.value) {
+    case 'weak': return 'Weak';
+    case 'fair': return 'Fair';
+    case 'good': return 'Good';
+    case 'strong': return 'Strong';
+    default: return 'Weak';
+  }
+});
+
+const strengthClass = computed(() => `strength-${strengthLevel.value}`);
 </script>
 
 <style scoped>
-.password-strength-meter {
+.password-strength {
   margin-top: 8px;
-  padding: 12px;
-  background: #fafafa;
-  border-radius: 6px;
-  border: 1px solid #e0e0e6;
-}
-
-.strength-bar-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
 }
 
 .strength-bar {
-  flex: 1;
-  height: 6px;
-  background: #f0f0f0;
-  border-radius: 3px;
+  height: 4px;
+  background-color: #e0e0e0;
+  border-radius: 2px;
   overflow: hidden;
-  position: relative;
+  margin-bottom: 8px;
+
 }
 
 .strength-fill {
   height: 100%;
-  transition: width 0.3s ease, background-color 0.3s ease;
-  border-radius: 3px;
+  transition: all 0.3s ease;
+  border-radius: 2px;
 }
 
-.strength-fill.strength-weak {
-  background-color: #d03050;
+.strength-weak {
+  background-color: #d32f2f;
+  color: #d32f2f;
 }
 
-.strength-fill.strength-fair {
-  background-color: #f0a020;
+.strength-fair {
+  background-color: #f57c00;
+  color: #f57c00;
 }
 
-.strength-fill.strength-good {
-  background-color: #2080f0;
+.strength-good {
+  background-color: #388e3c;
+  color: #388e3c;
 }
 
-.strength-fill.strength-strong {
-  background-color: #18a058;
+.strength-strong {
+  background-color: #1976d2;
+  color: #1976d2;
 }
 
-.strength-text {
-  font-size: 12px;
-  font-weight: 500;
-  min-width: 45px;
-  text-align: right;
-}
-
-.feedback-container {
+.strength-info {
+  display: flex;
+  justify-content: flex-end;
   margin-bottom: 12px;
 }
 
-.feedback-list {
-  margin: 4px 0 0 0;
-  padding-left: 16px;
+.strength-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.requirements {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.requirements-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #495057;
+}
+
+.requirements-list {
   list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.feedback-item {
-  position: relative;
-  margin-bottom: 2px;
-}
-
-.feedback-item::before {
-  content: '•';
-  color: #f0a020;
-  position: absolute;
-  left: -12px;
-}
-
-.requirements-container {
-  border-top: 1px solid #e0e0e6;
-  padding-top: 8px;
-}
-
-.requirements-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.requirement-item {
+.requirements-list li {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12px;
+  color: #6c757d;
+  transition: color 0.2s ease;
 }
 
-.requirement-item.met {
-  opacity: 1;
+.requirements-list li.met {
+  color: #28a745;
 }
 
-.requirement-item:not(.met) {
-  opacity: 0.6;
+.requirements-list li :deep(.n-icon) {
+  flex-shrink: 0;
 }
 
+/* Dark theme support */
+.dark .requirements {
+  background-color: #2a2a2a;
+  border-color: #404040;
+}
+
+.dark .requirements-title {
+  color: #e0e0e0;
+}
+
+.dark .requirements-list li {
+  color: #a0a0a0;
+}
+
+.dark .requirements-list li.met {
+  color: #4caf50;
+}
+
+/* Mobile responsive */
 @media (max-width: 480px) {
-  .requirements-grid {
-    grid-template-columns: 1fr;
+  .requirements {
+    padding: 8px;
   }
   
-  .strength-bar-container {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
+  .requirements-title {
+    font-size: 12px;
   }
   
-  .strength-text {
-    text-align: left;
-    min-width: auto;
+  .requirements-list li {
+    font-size: 11px;
+
   }
 }
 </style>
