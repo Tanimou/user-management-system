@@ -11,7 +11,7 @@ export function createMockRequest(
   return {
     method,
     query: cookies ? {} : queryOrCookies,
-    headers: {},
+    headers: additional.headers || {},
     body: additional.body || {},
     cookies: cookies || (method === 'POST' ? queryOrCookies : {}),
     ...additional,

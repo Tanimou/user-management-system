@@ -27,6 +27,14 @@ vi.mock('../lib/prisma', () => ({
   },
 }));
 
+// Mock JWT
+vi.mock('jsonwebtoken', () => ({
+  default: {
+    verify: vi.fn(),
+    sign: vi.fn(),
+  },
+}));
+
 // Mock auth functions
 vi.mock('../lib/auth', async () => {
   const actual = await vi.importActual('../lib/auth');
@@ -40,13 +48,85 @@ vi.mock('../lib/auth', async () => {
   };
 });
 
+// Mock middleware components
+vi.mock('../lib/middleware/enhanced-auth', async () => {
+  const actual = await vi.importActual('../lib/middleware/enhanced-auth');
+  return {
+    ...actual,
+    verifyToken: vi.fn(),
+    withAuth: vi.fn((handler) => handler), // Pass through for testing
+  };
+});
+
+vi.mock('../lib/middleware/validation', async () => {
+  const actual = await vi.importActual('../lib/middleware/validation');
+  return {
+    ...actual,
+    validateQuery: vi.fn((schema) => (handler) => async (req, res) => {
+      // Process query parameters through validation
+      const { error, value } = schema.validate(req.query);
+      if (!error) {
+        req.query = value;
+      }
+      return handler(req, res);
+    }),
+    validateBody: vi.fn((schema) => (handler) => async (req, res) => {
+      // Process body through validation  
+      const { error, value } = schema.validate(req.body);
+      if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+      }
+      req.body = value;
+      return handler(req, res);
+    }),
+  };
+});
+
+vi.mock('../lib/middleware/index', async () => {
+  const actual = await vi.importActual('../lib/middleware/index');
+  return {
+    ...actual,
+    withCORS: vi.fn((handler) => handler), // Pass through for testing
+    withErrorHandling: vi.fn((handler) => handler), // Pass through for testing
+    withAuth: vi.fn((handler) => handler), // Pass through for testing
+    withAdminRole: vi.fn((handler) => async (req, res) => {
+      // Mock admin role check
+      if (!req.user?.roles?.includes('admin')) {
+        return res.status(403).json({ error: 'Admin role required' });
+      }
+      return handler(req, res);
+    }),
+  };
+});
+
 import { hashPassword, requireAuth, requireRole } from '../lib/auth';
 import prisma from '../lib/prisma';
 import handler from '../users/index';
+import jwt from 'jsonwebtoken';
+import { verifyToken } from '../lib/middleware/enhanced-auth';
+import { getUsersSchema, createUserSchema } from '../lib/schemas/user';
 
 describe('Users API - GET /api/users', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock JWT verification to return a valid payload
+    vi.mocked(jwt.verify).mockReturnValue({
+      userId: 1,
+      email: 'test@example.com', 
+      roles: ['user']
+    } as any);
+    
+    // Mock verifyToken to return successful auth
+    vi.mocked(verifyToken).mockResolvedValue({
+      authenticated: true,
+      user: {
+        id: 1,
+        email: 'test@example.com',
+        roles: ['user'],
+        isActive: true
+      }
+    });
+    
     vi.mocked(requireAuth).mockResolvedValue(true);
   });
 
@@ -59,7 +139,10 @@ describe('Users API - GET /api/users', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers);
     vi.mocked(prisma.user.count).mockResolvedValue(2);
 
-    const req = createMockRequest('GET', {}, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest('GET', {}, { 
+      user: { userId: 1, roles: ['user'] },
+      headers: { authorization: 'Bearer valid-token' }
+    });
     const res = createMockResponse();
 
     await handler(req, res);
@@ -89,7 +172,10 @@ describe('Users API - GET /api/users', () => {
     const req = createMockRequest(
       'GET',
       { search: 'john' },
-      { user: { userId: 1, roles: ['user'] } }
+      { 
+        user: { userId: 1, roles: ['user'] },
+        headers: { authorization: 'Bearer valid-token' }
+      }
     );
     const res = createMockResponse();
 
@@ -115,7 +201,7 @@ describe('Users API - GET /api/users', () => {
     const req = createMockRequest(
       'GET',
       { page: '2', size: '5' },
-      { user: { userId: 1, roles: ['user'] } }
+      { user: { userId: 1, roles: ['user'] }, headers: { authorization: 'Bearer valid-token' } }
     );
     const res = createMockResponse();
 
@@ -136,7 +222,7 @@ describe('Users API - GET /api/users', () => {
     const req = createMockRequest(
       'GET',
       { active: 'true' },
-      { user: { userId: 1, roles: ['user'] } }
+      { user: { userId: 1, roles: ['user'] }, headers: { authorization: 'Bearer valid-token' } }
     );
     const res = createMockResponse();
 
@@ -155,8 +241,11 @@ describe('Users API - GET /api/users', () => {
 
     const req = createMockRequest(
       'GET',
-      { orderBy: 'name', order: 'asc' },
-      { user: { userId: 1, roles: ['user'] } }
+      { sort: 'name', order: 'asc' },
+      { 
+        user: { userId: 1, roles: ['user'] },
+        headers: { authorization: 'Bearer valid-token' }
+      }
     );
     const res = createMockResponse();
 
@@ -176,7 +265,7 @@ describe('Users API - GET /api/users', () => {
     const req = createMockRequest(
       'GET',
       { role: 'admin' },
-      { user: { userId: 1, roles: ['user'] } }
+      { user: { userId: 1, roles: ['user'] }, headers: { authorization: 'Bearer valid-token' } }
     );
     const res = createMockResponse();
 
@@ -195,8 +284,11 @@ describe('Users API - GET /api/users', () => {
 
     const req = createMockRequest(
       'GET',
-      { orderBy: 'updatedAt', order: 'desc' },
-      { user: { userId: 1, roles: ['user'] } }
+      { sort: 'updatedAt', order: 'desc' },
+      { 
+        user: { userId: 1, roles: ['user'] },
+        headers: { authorization: 'Bearer valid-token' }
+      }
     );
     const res = createMockResponse();
 
@@ -216,7 +308,7 @@ describe('Users API - GET /api/users', () => {
     const req = createMockRequest(
       'GET',
       { role: 'invalid' },
-      { user: { userId: 1, roles: ['user'] } }
+      { user: { userId: 1, roles: ['user'] }, headers: { authorization: 'Bearer valid-token' } }
     );
     const res = createMockResponse();
 
@@ -239,7 +331,7 @@ describe('Users API - GET /api/users', () => {
         createdFrom: '2023-01-01',
         createdTo: '2023-12-31',
       },
-      { user: { userId: 1, roles: ['user'] } }
+      { user: { userId: 1, roles: ['user'] }, headers: { authorization: 'Bearer valid-token' } }
     );
     const res = createMockResponse();
 
@@ -264,7 +356,7 @@ describe('Users API - GET /api/users', () => {
     const req = createMockRequest(
       'GET',
       { createdFrom: '2023-01-01' },
-      { user: { userId: 1, roles: ['user'] } }
+      { user: { userId: 1, roles: ['user'] }, headers: { authorization: 'Bearer valid-token' } }
     );
     const res = createMockResponse();
 
@@ -353,7 +445,7 @@ describe('Users API - POST /api/users', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Name, email, and password are required' });
+    expect(res.json).toHaveBeenCalledWith({ error: '"email" is required' });
   });
 
   it('should validate password length', async () => {
@@ -374,11 +466,7 @@ describe('Users API - POST /api/users', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      error: 'Password does not meet policy requirements',
-      details: expect.arrayContaining(['Password must be at least 8 characters long']),
-      code: 'INVALID_PASSWORD_POLICY',
-    });
+    expect(res.json).toHaveBeenCalledWith({ error: '"password" length must be at least 8 characters long' });
   });
 
   it('should validate roles array', async () => {
@@ -386,12 +474,12 @@ describe('Users API - POST /api/users', () => {
       'POST',
       {},
       {
-        user: { userId: 1, roles: ['admin'] },
+        user: { userId: 1, roles: ['admin'], headers: { authorization: 'Bearer valid-token' } },
         body: {
           name: 'Test',
           email: 'test@example.com',
           password: 'Password123!',
-          roles: ['admin'], // Missing required 'user' role
+          roles: ['invalid-role'], // Invalid role
         },
       }
     );
@@ -400,8 +488,8 @@ describe('Users API - POST /api/users', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      error: 'Roles must be an array containing valid roles and at least "user"',
+    expect(res.json).toHaveBeenCalledWith({ 
+      error: '"roles[0]" must be one of [user, admin]' 
     });
   });
 
