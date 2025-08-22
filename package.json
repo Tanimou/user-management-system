@@ -38,6 +38,8 @@
   "author": "Development Team",
   "license": "MIT",
   "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
     "inherits": "^2.0.4",
     "tsx": "^4.20.4",
     "vitest": "^3.2.4"
