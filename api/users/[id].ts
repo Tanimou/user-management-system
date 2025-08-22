@@ -1,13 +1,13 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from '../lib/prisma.js';
+import type { VercelResponse } from '@vercel/node';
 import {
+  hashPassword,
   requireAuth,
   requireRole,
-  hashPassword,
   setCORSHeaders,
   setSecurityHeaders,
   type AuthenticatedRequest,
 } from '../lib/auth.js';
+import prisma from '../lib/prisma.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -53,8 +53,8 @@ async function handleGetUser(req: AuthenticatedRequest, res: VercelResponse, use
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        avatarUrl: true
-      }
+        avatarUrl: true,
+      },
     });
 
     if (!user) {
@@ -62,7 +62,6 @@ async function handleGetUser(req: AuthenticatedRequest, res: VercelResponse, use
     }
 
     return res.status(200).json({ data: user });
-
   } catch (error) {
     console.error('Get user error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -82,7 +81,7 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
 
     // Find user
     const existingUser = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
     });
 
     if (!existingUser) {
@@ -105,11 +104,11 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
       if (!isAdmin) {
         return res.status(403).json({ error: 'Only admins can update email addresses' });
       }
-      
+
       if (typeof email !== 'string' || email.length > 180) {
         return res.status(400).json({ error: 'Email must be a string with max 180 characters' });
       }
-      
+
       updateData.email = email.toLowerCase().trim();
     }
 
@@ -126,7 +125,7 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
       if (!isAdmin) {
         return res.status(403).json({ error: 'Only admins can update user roles' });
       }
-      
+
       if (!Array.isArray(roles) || !roles.includes('user')) {
         return res.status(400).json({ error: 'Roles must be an array containing at least "user"' });
       }
@@ -165,22 +164,21 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        avatarUrl: true
-      }
+        avatarUrl: true,
+      },
     });
 
     return res.status(200).json({
       message: 'User updated successfully',
-      data: updatedUser
+      data: updatedUser,
     });
-
   } catch (error) {
     console.error('Update user error:', error);
-    
+
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
-    
+
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -199,7 +197,7 @@ async function handleDeleteUser(req: AuthenticatedRequest, res: VercelResponse, 
 
     // Find user
     const existingUser = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
     });
 
     if (!existingUser) {
@@ -222,15 +220,14 @@ async function handleDeleteUser(req: AuthenticatedRequest, res: VercelResponse, 
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        avatarUrl: true
-      }
+        avatarUrl: true,
+      },
     });
 
     return res.status(200).json({
       message: 'User deleted successfully',
-      data: deletedUser
+      data: deletedUser,
     });
-
   } catch (error) {
     console.error('Delete user error:', error);
     return res.status(500).json({ error: 'Internal server error' });
