@@ -224,9 +224,9 @@ import { useUsersStore } from '@/stores/users';
 
 // Components
 import UserTable from '@/components/UserTable.vue';
-import UserForm from '@/components/UserForm.vue';
-import UserProfile from '@/components/UserProfile.vue';
-import PaginationControls from '@/components/PaginationControls.vue';
+import UserForm from '@/components/forms/UserForm.vue';
+import UserProfile from '@/components/forms/UserProfile.vue';
+import PaginationControls from '@/components/common/PaginationControls.vue';
 import ProfileSummaryCard from '@/components/ProfileSummaryCard.vue';
 import AccountActivityCard from '@/components/AccountActivityCard.vue';
 import QuickActionsCard from '@/components/QuickActionsCard.vue';

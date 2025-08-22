@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
-import PasswordStrengthMeter from '../PasswordStrengthMeter.vue';
+import PasswordStrengthMeter from '../common/PasswordStrengthMeter.vue';
 
 // Mock naive-ui components
 vi.mock('naive-ui', () => ({
