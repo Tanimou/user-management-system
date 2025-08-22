@@ -1,12 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from './lib/prisma';
+import prisma from './lib/prisma.js';
 import {
   requireAuth,
   hashPassword,
   setCORSHeaders,
   setSecurityHeaders,
   type AuthenticatedRequest,
-} from './lib/auth';
+} from './lib/auth.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers

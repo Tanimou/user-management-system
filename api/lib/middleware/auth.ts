@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAuth, requireRole, type JWTPayload, type AuthenticatedRequest } from '../auth';
+import { requireAuth, requireRole, type JWTPayload, type AuthenticatedRequest } from '../auth.js';
 
 /**
  * Authentication middleware for Vercel serverless functions

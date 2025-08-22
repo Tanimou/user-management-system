@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from './lib/prisma';
+import prisma from './lib/prisma.js';
 import {
   verifyRefreshToken,
   signAccessToken,
@@ -9,8 +9,8 @@ import {
   setCORSHeaders,
   setSecurityHeaders,
   type JWTPayload
-} from './lib/auth';
-import { createAuthRateLimit } from './lib/rate-limiter';
+} from './lib/auth.js';
+import { createAuthRateLimit } from './lib/rate-limiter.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers

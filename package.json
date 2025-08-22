@@ -26,5 +26,8 @@
     "jwt-auth"
   ],
   "author": "Development Team",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
 }
