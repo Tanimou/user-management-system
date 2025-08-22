@@ -16,7 +16,12 @@
     "test": "npm run test:api && npm run test:web",
     "test:api": "npm run test --workspace=api -- --run",
     "test:web": "npm run test:run --workspace=web",
-    "test:coverage": "npm run test:coverage --workspace=api",
+    "test:coverage": "npm run test:coverage --workspace=api && npm run test:coverage --workspace=web",
+    "test:unit": "npm run test:unit --workspace=api",
+    "test:integration": "npm run test:integration --workspace=api",
+    "test:e2e": "npm run test:e2e --workspace=web",
+    "test:all": "npm run test && npm run test:e2e",
+    "test:ci": "npm run test:unit && npm run test:integration && npm run test:web && npm run test:e2e",
     "deploy": "vercel --prod",
     "deploy:preview": "vercel",
     "migrate:prod": "tsx scripts/migrate-production.ts",
@@ -24,7 +29,9 @@
     "generate:secrets": "node scripts/generate-secrets.js",
     "db:migrate": "npm run db:migrate --workspace=api",
     "db:generate": "npm run db:generate --workspace=api",
-    "db:studio": "npm run db:studio --workspace=api"
+    "db:studio": "npm run db:studio --workspace=api",
+    "format": "npm run format --workspace=api && npm run format --workspace=web",
+    "format:check": "npm run format:check --workspace=api && npm run format:check --workspace=web"
   },
   "keywords": [
     "user-management",

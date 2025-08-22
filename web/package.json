@@ -10,6 +10,11 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest --run",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "install:playwright": "npx playwright install",
     "type-check": "vue-tsc --noEmit",
     "lint": "echo 'ESLint configuration pending - linting will be enabled in next iteration'",
     "lint:fix": "echo 'ESLint configuration pending - linting will be enabled in next iteration'",
@@ -26,6 +31,7 @@
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/node": "^20.10.6",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
