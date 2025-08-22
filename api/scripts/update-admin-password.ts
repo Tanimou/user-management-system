@@ -21,8 +21,8 @@ async function updateAdminPassword() {
     // Validate password meets policy requirements
     const validation = validatePasswordPolicy(newPassword);
     if (!validation.isValid) {
-      console.error('❌ Password does not meet policy requirements:');
-      validation.errors.forEach(error => console.error(`  - ${error}`));
+      console.error('❌ Password does not meet policy requirements.');
+      // For security, individual policy requirements are not logged.
       process.exit(1);
     }
 
