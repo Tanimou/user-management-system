@@ -89,7 +89,6 @@ import prisma from '../lib/prisma';
 import { requireAuth, hashPassword } from '../lib/auth';
 import jwt from 'jsonwebtoken';
 import { verifyToken } from '../lib/middleware/enhanced-auth';
-import { updateUserSchema } from '../lib/schemas/user';
 
 describe('User Profile API - GET /api/me', () => {
   beforeEach(() => {
