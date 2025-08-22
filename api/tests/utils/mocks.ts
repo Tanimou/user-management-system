@@ -46,3 +46,15 @@ export function createMockUser(
     avatarUrl: avatarUrl || null
   };
 }
+
+export function createMockJWTPayload(
+  userId: number,
+  email: string = 'test@example.com',
+  roles: string[] = ['user']
+) {
+  return {
+    userId,
+    email,
+    roles
+  };
+}

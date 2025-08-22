@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createMockRequest, createMockResponse, createMockUser } from './utils/mocks';
+import { createMockRequest, createMockResponse, createMockUser, createMockJWTPayload } from './utils/mocks';
 
 // Mock prisma
 vi.mock('../lib/prisma', () => ({
