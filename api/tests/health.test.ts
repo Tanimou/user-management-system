@@ -8,6 +8,14 @@ vi.mock('../lib/auth.js', () => ({
   setSecurityHeaders: vi.fn(),
 }));
 
+// Mock prisma module to prevent initialization issues
+vi.mock('../lib/prisma.js', () => ({
+  default: {
+    $connect: vi.fn().mockResolvedValue(undefined),
+    $disconnect: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 describe('Health Endpoint', () => {
   const createMockRequest = (method = 'GET'): VercelRequest => ({
     method,

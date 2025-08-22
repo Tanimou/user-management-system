@@ -27,11 +27,13 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.6",
     "argon2": "^0.44.0",
+    "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^5.7.1",
     "typescript": "^5.3.3"
   },
   "devDependencies": {
+    "@types/joi": "^17.2.2",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^8.40.0",
     "@typescript-eslint/project-service": "^8.40.0",
