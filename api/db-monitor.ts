@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCORSHeaders, setSecurityHeaders, verifyToken } from './lib/auth.js';
+import { setCORSHeaders, setSecurityHeaders, requireAuth, AuthenticatedRequest } from './lib/auth.js';
 import DatabaseMonitor from './lib/db-monitoring.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -18,13 +18,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Verify authentication - only authenticated users can access detailed metrics
-    const authResult = await verifyToken(req);
-    if (!authResult.success) {
-      return res.status(401).json({ error: 'Authentication required' });
+    const authReq = req as AuthenticatedRequest;
+    if (!(await requireAuth(authReq, res))) {
+      return; // requireAuth already sent the response
     }
 
     // Only admin users can access database monitoring
-    const { user } = authResult;
+    const { user } = authReq;
     if (!user?.roles?.includes('admin')) {
       return res.status(403).json({ error: 'Admin access required' });
     }
