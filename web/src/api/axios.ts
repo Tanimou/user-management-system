@@ -10,7 +10,7 @@ const apiClient = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -68,7 +68,14 @@ apiClient.interceptors.response.use(
         });
 
         const { token: accessToken } = response.data; // Updated to match API spec
-        localStorage.setItem('accessToken', accessToken);
+        
+        // Store token in the same place it was originally stored
+        const wasInLocalStorage = localStorage.getItem('rememberMe') === 'true';
+        if (wasInLocalStorage) {
+          localStorage.setItem('accessToken', accessToken);
+        } else {
+          sessionStorage.setItem('accessToken', accessToken);
+        }
         
         processQueue(null, accessToken);
         
@@ -78,8 +85,10 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         
-        // Clear auth data
+        // Clear auth data from both storage types
         localStorage.removeItem('accessToken');
+        sessionStorage.removeItem('accessToken');
+        localStorage.removeItem('rememberMe');
         
         // Redirect to login
         if (typeof window !== 'undefined') {
