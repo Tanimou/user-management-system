@@ -17,7 +17,7 @@ const getDeactivatedUsersHandler = withCORS(
       withAdminRole(
         validateQuery(getUsersSchema)(
           async (req: AuthenticatedRequest, res: VercelResponse) => {
-            return handleGetDeactivatedUsers(req, res);
+            await handleGetDeactivatedUsers(req, res);
           }
         )
       )
@@ -27,9 +27,9 @@ const getDeactivatedUsersHandler = withCORS(
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   if (req.method === 'GET') {
-    return getDeactivatedUsersHandler(req, res);
+    await getDeactivatedUsersHandler(req, res);
   } else {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
   }
 }
 

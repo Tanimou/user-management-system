@@ -23,7 +23,7 @@ const getUserHandler = withCORS(
         validateQuery(userIdSchema)(
           async (req: AuthenticatedRequest, res: VercelResponse) => {
             const userId = Number(req.query.id);
-            return handleGetUser(req, res, userId);
+            await handleGetUser(req, res, userId);
           }
         )
       )
@@ -41,7 +41,7 @@ const updateUserHandler = withCORS(
             validateBody(updateUserSchema)(
               async (req: AuthenticatedRequest, res: VercelResponse) => {
                 const userId = Number(req.query.id);
-                return handleUpdateUser(req, res, userId);
+                await handleUpdateUser(req, res, userId);
               }
             )
           )
@@ -68,7 +68,7 @@ const deleteUserHandler = withCORS(
               });
             }
             
-            return handleDeleteUser(req, res, userId);
+            await handleDeleteUser(req, res, userId);
           }
         )
       )
@@ -87,7 +87,7 @@ const restoreUserHandler = withCORS(
             const { action } = req.body;
             
             if (action === 'restore') {
-              return handleRestoreUser(req, res, userId);
+              await handleRestoreUser(req, res, userId);
             } else {
               return res.status(400).json({ error: 'Invalid action' });
             }
@@ -100,15 +100,15 @@ const restoreUserHandler = withCORS(
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   if (req.method === 'GET') {
-    return getUserHandler(req, res);
+    await getUserHandler(req, res);
   } else if (req.method === 'PUT') {
-    return updateUserHandler(req, res);
+    await updateUserHandler(req, res);
   } else if (req.method === 'DELETE') {
-    return deleteUserHandler(req, res);
+    await deleteUserHandler(req, res);
   } else if (req.method === 'POST') {
-    return restoreUserHandler(req, res);
+    await restoreUserHandler(req, res);
   } else {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
 }
 
 async function handleGetUser(req: AuthenticatedRequest, res: VercelResponse, userId: number) {

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import * as Joi from 'joi';
+import Joi from 'joi';
 
 export function validateBody(schema: Joi.ObjectSchema) {
   return function (handler: Function) {

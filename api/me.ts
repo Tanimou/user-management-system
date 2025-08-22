@@ -15,7 +15,7 @@ const getProfileHandler = withCORS(
   withErrorHandling(
     withAuth(
       async (req: AuthenticatedRequest, res: VercelResponse) => {
-        return handleGetProfile(req, res);
+        await handleGetProfile(req, res);
       }
     )
   )
@@ -27,7 +27,7 @@ const updateProfileHandler = withCORS(
     withAuth(
       validateBody(updateUserSchema.fork(['email', 'roles', 'isActive'], (schema) => schema.forbidden()))(
         async (req: AuthenticatedRequest, res: VercelResponse) => {
-          return handleUpdateProfile(req, res);
+          await handleUpdateProfile(req, res);
         }
       )
     )
@@ -36,11 +36,11 @@ const updateProfileHandler = withCORS(
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   if (req.method === 'GET') {
-    return getProfileHandler(req, res);
+    await getProfileHandler(req, res);
   } else if (req.method === 'PUT') {
-    return updateProfileHandler(req, res);
+    await updateProfileHandler(req, res);
   } else {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
 }
 
 async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) {

@@ -19,7 +19,7 @@ const getUsersHandler = withCORS(
     withAuth(
       validateQuery(getUsersSchema)(
         async (req: AuthenticatedRequest, res: VercelResponse) => {
-          return handleGetUsers(req, res);
+          await handleGetUsers(req, res);
         }
       )
     )
@@ -33,7 +33,7 @@ const createUserHandler = withCORS(
       withAdminRole(
         validateBody(createUserSchema)(
           async (req: AuthenticatedRequest, res: VercelResponse) => {
-            return handleCreateUser(req, res);
+            await handleCreateUser(req, res);
           }
         )
       )
@@ -43,11 +43,11 @@ const createUserHandler = withCORS(
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   if (req.method === 'GET') {
-    return getUsersHandler(req, res);
+    await getUsersHandler(req, res);
   } else if (req.method === 'POST') {
-    return createUserHandler(req, res);
+    await createUserHandler(req, res);
   } else {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
   }
 }
 

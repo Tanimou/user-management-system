@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma.js';
 
 export interface AuthenticatedRequest extends VercelRequest {
@@ -14,7 +14,7 @@ export interface AuthenticatedRequest extends VercelRequest {
 export type AuthHandler = (
   req: AuthenticatedRequest,
   res: VercelResponse
-) => Promise<void> | void;
+) => Promise<void | VercelResponse> | void | VercelResponse;
 
 export type MiddlewareResult = {
   authenticated: boolean;

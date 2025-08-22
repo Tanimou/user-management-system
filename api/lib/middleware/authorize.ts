@@ -4,7 +4,7 @@ import { AuthenticatedRequest } from './enhanced-auth.js';
 export type AuthorizedHandler = (
   req: AuthenticatedRequest,
   res: VercelResponse
-) => Promise<void> | void;
+) => Promise<void | VercelResponse> | void | VercelResponse;
 
 export function withRoles(roles: string[]) {
   return function (handler: AuthorizedHandler) {
