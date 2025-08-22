@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { Prisma } from '@prisma/client';
 
 export interface ApiError {
   error: string;
