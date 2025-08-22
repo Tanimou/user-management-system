@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCORSHeaders, setSecurityHeaders } from './lib/auth.js';
 import { prisma } from './lib/prisma';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -16,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Test database connection
     let databaseStatus = 'connected';
     let userCount = 0;
-    
+
     try {
       await prisma.$queryRaw`SELECT 1`;
       userCount = await prisma.user.count();
@@ -24,10 +23,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       databaseStatus = 'disconnected';
       console.error('Database connection failed:', dbError);
     }
-    
+
     // Get memory usage
     const memoryUsage = process.memoryUsage();
-    
+
     return res.status(200).json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -38,20 +37,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         database: databaseStatus,
         memory: {
           used: Math.round((memoryUsage.heapUsed / 1024 / 1024) * 100) / 100,
-          total: Math.round((memoryUsage.heapTotal / 1024 / 1024) * 100) / 100
-        }
+          total: Math.round((memoryUsage.heapTotal / 1024 / 1024) * 100) / 100,
+        },
       },
       data: {
-        userCount
-      }
+        userCount,
+      },
     });
-
   } catch (error) {
     console.error('Health check failed:', error);
     return res.status(500).json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
   }
 }

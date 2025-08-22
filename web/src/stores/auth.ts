@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
 import apiClient from '@/api/axios';
+import { defineStore } from 'pinia';
+import { computed, ref } from 'vue';
 
 export interface User {
   id: number;
@@ -21,8 +21,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Getters
   const isAuthenticated = computed(() => {
-    const token = localStorage.getItem('accessToken');
-    return !!token && !!user.value;
+    // Check both storage locations for token
+    const hasToken = !!localStorage.getItem('accessToken') || !!sessionStorage.getItem('accessToken');
+    const hasUser = !!user.value;
+    console.log('Auth check:', { hasToken, hasUser, user: user.value });
+    return hasToken && hasUser;
   });
 
   const isAdmin = computed(() => {
@@ -58,14 +61,14 @@ export const useAuthStore = defineStore('auth', () => {
           roles: ['user'],
           isActive: true,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         };
-        
+
         localStorage.setItem('accessToken', 'demo-token');
         user.value = demoUser;
         return { success: true };
       }
-      
+
       // Admin demo mode
       if (email === 'admin@demo.com' && password === 'admin1234') {
         const adminUser: User = {
@@ -75,17 +78,17 @@ export const useAuthStore = defineStore('auth', () => {
           roles: ['admin', 'user'],
           isActive: true,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         };
-        
+
         localStorage.setItem('accessToken', 'admin-token');
         user.value = adminUser;
         return { success: true };
       }
-      
+
       const response = await apiClient.post('/login', { email, password });
       const { user: userData, token: accessToken } = response.data; // Updated to match API spec
-      
+
       // Store token based on remember me preference
       if (rememberMe) {
         localStorage.setItem('accessToken', accessToken);
@@ -95,14 +98,14 @@ export const useAuthStore = defineStore('auth', () => {
         sessionStorage.setItem('accessToken', accessToken);
         localStorage.removeItem('rememberMe');
       }
-      
+
       user.value = userData;
-      
+
       return { success: true };
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.response?.data?.error || 'Login failed' 
+      return {
+        success: false,
+        message: error.response?.data?.error || 'Login failed',
       };
     } finally {
       loading.value = false;
@@ -116,7 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.removeItem('accessToken');
       localStorage.removeItem('rememberMe');
       user.value = null;
-      
+
       // Optional: Call logout endpoint to clear refresh token
       // This will fail silently if the API doesn't have a logout endpoint
       try {
@@ -143,9 +146,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function updateProfile(data: { 
-    name?: string; 
-    password?: string; 
+  async function updateProfile(data: {
+    name?: string;
+    password?: string;
     currentPassword?: string;
   }) {
     try {
@@ -153,13 +156,12 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = response.data.data;
       return { success: true };
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.response?.data?.error || 'Update failed' 
+      return {
+        success: false,
+        message: error.response?.data?.error || 'Update failed',
       };
     }
   }
-
 
   function updateUser(userData: Partial<User>) {
     if (user.value) {
@@ -185,6 +187,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchProfile,
     updateProfile,
     updateUser,
-    setDemoUser
+    setDemoUser,
   };
 });

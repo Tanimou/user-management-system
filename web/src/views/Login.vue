@@ -286,11 +286,27 @@ async function handleLogin() {
     if (result.success) {
       message.success('Login successful!');
       
-      // Role-based redirect
-      if (authStore.isAdmin) {
-        router.push('/');
-      } else {
-        router.push('/');
+      // Wait a tick to ensure reactive updates have propagated
+      await nextTick();
+      
+      // Check authentication state before redirecting
+      console.log('Auth state after login:', {
+        isAuthenticated: authStore.isAuthenticated,
+        user: authStore.user,
+        isAdmin: authStore.isAdmin
+      });
+      
+      // Role-based redirect with fallback
+      try {
+        if (authStore.isAdmin) {
+          await router.push('/users');
+        } else {
+          await router.push('/');
+        }
+      } catch (routerError) {
+        console.error('Router error:', routerError);
+        // Force reload if routing fails
+        window.location.href = authStore.isAdmin ? '/users' : '/';
       }
     } else {
       errorMessage.value = getErrorMessage({ message: result.message });

@@ -1,5 +1,5 @@
 // Test setup file
-import { beforeAll, afterAll } from 'vitest';
+import { afterAll, beforeAll } from 'vitest';
 
 // Mock environment variables for testing
 process.env.DATABASE_URL = "postgresql://test_user:test_password@localhost:5432/user_management_test";

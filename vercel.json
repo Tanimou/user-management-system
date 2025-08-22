@@ -1,24 +1,15 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "web/**",
-      "use": "@vercel/static-build",
-      "config": {
-        "buildCommand": "cd web && npm run build",
-        "outputDirectory": "web/dist"
-      }
-    }
-  ],
+  "buildCommand": "cd web && npm run build",
+  "outputDirectory": "web/dist",
   "functions": {
     "api/**/*.ts": {
-      "runtime": "nodejs18.x",
       "maxDuration": 10
     }
   },
   "env": {
     "DATABASE_URL": "@database_url",
-    "JWT_ACCESS_SECRET": "@jwt_access_secret", 
+    "JWT_ACCESS_SECRET": "@jwt_access_secret",
     "JWT_REFRESH_SECRET": "@jwt_refresh_secret",
     "FRONTEND_ORIGIN": "@frontend_origin"
   },

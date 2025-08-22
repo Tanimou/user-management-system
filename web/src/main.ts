@@ -1,56 +1,56 @@
-import { createApp } from 'vue';
-import { createPinia } from 'pinia';
-import { createRouter, createWebHistory } from 'vue-router';
 import naive from 'naive-ui';
+import { createPinia } from 'pinia';
+import { createApp } from 'vue';
+import { createRouter, createWebHistory } from 'vue-router';
 
 import App from './App.vue';
-import Login from './views/Login.vue';
-import Dashboard from './views/Dashboard.vue';
 import { useAuthStore } from './stores/auth';
+import Dashboard from './views/Dashboard.vue';
+import Login from './views/Login.vue';
 
 // Define routes
 const routes = [
-  { 
-    path: '/login', 
-    name: 'Login', 
+  {
+    path: '/login',
+    name: 'Login',
     component: Login,
-    meta: { requiresGuest: true }
+    meta: { requiresGuest: true },
   },
-  { 
-    path: '/', 
-    name: 'Dashboard', 
+  {
+    path: '/',
+    name: 'Dashboard',
     component: Dashboard,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
-  { 
-    path: '/users', 
-    name: 'Users', 
+  {
+    path: '/users',
+    name: 'Users',
     component: Dashboard,
-    meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
-  { 
-    path: '/profile', 
-    name: 'Profile', 
+  {
+    path: '/profile',
+    name: 'Profile',
     component: Dashboard,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   // Demo routes without auth for testing
-  { 
-    path: '/demo-user', 
-    name: 'DemoUser', 
+  {
+    path: '/demo-user',
+    name: 'DemoUser',
     component: Dashboard,
-    meta: { demo: 'user' }
+    meta: { demo: 'user' },
   },
-  { 
-    path: '/demo-admin', 
-    name: 'DemoAdmin', 
+  {
+    path: '/demo-admin',
+    name: 'DemoAdmin',
     component: Dashboard,
-    meta: { demo: 'admin' }
+    meta: { demo: 'admin' },
   },
   // Redirect /dashboard to /
-  { 
-    path: '/dashboard', 
-    redirect: '/' 
+  {
+    path: '/dashboard',
+    redirect: '/',
   },
 ];
 
@@ -70,8 +70,16 @@ app.use(router);
 app.use(naive);
 
 // Navigation guards
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
+
+  console.log('Router guard:', {
+    to: to.path,
+    from: from.path,
+    isAuthenticated: authStore.isAuthenticated,
+    user: authStore.user,
+    meta: to.meta,
+  });
 
   // Temporarily disable auth checks for demo - comment out for production
   if (to.path.startsWith('/demo-')) {
@@ -79,14 +87,19 @@ router.beforeEach((to, from, next) => {
     return;
   }
 
+  // Check if auth is required
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    console.log('Redirecting to login - auth required but not authenticated');
     next('/login');
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    console.log('Redirecting to dashboard - guest required but authenticated');
     next('/');
   } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    console.log('Redirecting to dashboard - admin required but not admin');
     // Redirect non-admin users trying to access admin routes
     next('/');
   } else {
+    console.log('Navigation allowed');
     next();
   }
 });
