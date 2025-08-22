@@ -1,104 +1,93 @@
 import type { VercelResponse } from '@vercel/node';
-import {
-  hashPassword,
-  requireAuth,
-  setCORSHeaders,
-  setSecurityHeaders,
-  type AuthenticatedRequest,
-} from './lib/auth.js';
+import { hashPassword } from './lib/auth.js';
+import { 
+  withCORS, 
+  withErrorHandling, 
+  withAuth, 
+  validateBody,
+  type AuthenticatedRequest 
+} from './lib/middleware/index.js';
 import prisma, { USER_SELECT_FIELDS } from './lib/prisma.js';
-import { validatePasswordPolicy, validateName } from './lib/validation.js';
+import { updateUserSchema } from './lib/schemas/user.js';
+
+// GET /api/me - Get current user profile
+const getProfileHandler = withCORS(
+  withErrorHandling(
+    withAuth(
+      async (req: AuthenticatedRequest, res: VercelResponse) => {
+        return handleGetProfile(req, res);
+      }
+    )
+  )
+);
+
+// PUT /api/me - Update current user profile  
+const updateProfileHandler = withCORS(
+  withErrorHandling(
+    withAuth(
+      validateBody(updateUserSchema.fork(['email', 'roles', 'isActive'], (schema) => schema.forbidden()))(
+        async (req: AuthenticatedRequest, res: VercelResponse) => {
+          return handleUpdateProfile(req, res);
+        }
+      )
+    )
+  )
+);
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
-  // Set CORS and security headers
-  setCORSHeaders(res);
-  setSecurityHeaders(res);
-
-  // Handle preflight OPTIONS request
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  // Authenticate user for all requests
-  const isAuthenticated = await requireAuth(req, res);
-  if (!isAuthenticated) return;
-
   if (req.method === 'GET') {
-    return handleGetProfile(req, res);
+    return getProfileHandler(req, res);
   } else if (req.method === 'PUT') {
-    return handleUpdateProfile(req, res);
+    return updateProfileHandler(req, res);
   } else {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
 }
 
 async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) {
-  try {
-    const userId = req.user!.userId;
+  const userId = req.user.id;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: USER_SELECT_FIELDS,
-    });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: USER_SELECT_FIELDS,
+  });
 
-    if (!user || !user.isActive) {
-      return res.status(404).json({ error: 'User not found or inactive' });
-    }
-
-    return res.status(200).json({ data: user });
-  } catch (error) {
-    console.error('Get profile error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+  if (!user || !user.isActive) {
+    return res.status(404).json({ error: 'User not found or inactive' });
   }
+
+  return res.status(200).json({ data: user });
 }
 
 async function handleUpdateProfile(req: AuthenticatedRequest, res: VercelResponse) {
-  try {
-    const userId = req.user!.userId;
-    const { name, password } = req.body;
+  // Body is already validated by middleware
+  const userId = req.user.id;
+  const { name, password } = req.body;
 
-    // Build update data (only allow name and password updates)
-    const updateData: any = {};
+  // Build update data (only name and password allowed for self-updates)
+  const updateData: any = { updatedAt: new Date() };
 
-    // Handle name update
-    if (name !== undefined) {
-      if (typeof name !== 'string' || name.length > 120) {
-        return res.status(400).json({ error: 'Name must be a string with max 120 characters' });
-      }
-      updateData.name = name.trim();
-    }
-
-    // Handle password update
-    if (password !== undefined) {
-      const passwordValidation = validatePasswordPolicy(password);
-      if (!passwordValidation.isValid) {
-        return res.status(400).json({ 
-          error: 'Password does not meet policy requirements',
-          details: passwordValidation.errors,
-          code: 'INVALID_PASSWORD_POLICY'
-        });
-      }
-      updateData.password = await hashPassword(password);
-    }
-
-    // If no valid updates provided
-    if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({ error: 'No valid fields to update' });
-    }
-
-    // Update user profile
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-      select: USER_SELECT_FIELDS,
-    });
-
-    return res.status(200).json({
-      message: 'Profile updated successfully',
-      data: updatedUser,
-    });
-  } catch (error) {
-    console.error('Update profile error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+  if (name !== undefined) {
+    updateData.name = name;
   }
+
+  if (password !== undefined) {
+    updateData.password = await hashPassword(password);
+  }
+
+  // If no valid updates provided
+  if (Object.keys(updateData).length === 1) { // Only updatedAt
+    return res.status(400).json({ error: 'No valid fields to update' });
+  }
+
+  // Update user profile
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+    select: USER_SELECT_FIELDS,
+  });
+
+  return res.status(200).json({
+    message: 'Profile updated successfully',
+    data: updatedUser,
+  });
 }

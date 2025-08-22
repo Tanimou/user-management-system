@@ -3,7 +3,7 @@
  */
 
 import prisma from './prisma.js';
-import type { AuthenticatedRequest } from './auth.js';
+import type { AuthenticatedRequest } from './middleware/enhanced-auth.js';
 
 /**
  * Log role change events for audit trail
@@ -17,7 +17,7 @@ export async function logRoleChange(
   try {
     await prisma.auditLog.create({
       data: {
-        actorId: req.user?.userId || null,
+        actorId: req.user?.id || null,
         action: 'ROLE_UPDATE',
         entity: 'User',
         entityId: targetUserId,
@@ -48,7 +48,7 @@ export async function logStatusChange(
   try {
     await prisma.auditLog.create({
       data: {
-        actorId: req.user?.userId || null,
+        actorId: req.user?.id || null,
         action: newStatus ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
         entity: 'User',
         entityId: targetUserId,
@@ -79,7 +79,7 @@ export async function logUserCreation(
     
     await prisma.auditLog.create({
       data: {
-        actorId: req.user?.userId || null,
+        actorId: req.user?.id || null,
         action: 'USER_CREATED',
         entity: 'User',
         entityId: newUserId,
@@ -106,7 +106,7 @@ export async function logUserDeletion(
   try {
     await prisma.auditLog.create({
       data: {
-        actorId: req.user?.userId || null,
+        actorId: req.user?.id || null,
         action: 'USER_DELETED',
         entity: 'User',
         entityId: targetUserId,

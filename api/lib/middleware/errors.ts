@@ -26,39 +26,44 @@ export function handleApiError(error: any, res: VercelResponse): void {
   if (error && typeof error === 'object' && error.code && error.meta !== undefined) {
     switch (error.code) {
       case 'P2002':
-        return res.status(409).json({
+        res.status(409).json({
           error: 'Conflict',
           message: 'A record with this information already exists',
           details: { field: error.meta?.target }
         });
+        return;
       case 'P2025':
-        return res.status(404).json({
+        res.status(404).json({
           error: 'Not found',
           message: 'The requested resource was not found'
         });
+        return;
       default:
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Database error',
           message: 'An error occurred while processing your request'
         });
+        return;
     }
   }
 
   // Custom application errors
   if (error instanceof AppError) {
-    return res.status(error.statusCode).json({
+    res.status(error.statusCode).json({
       error: error.message,
       message: error.message
     });
+    return;
   }
 
   // Validation errors
   if (error && error.name === 'ValidationError') {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'Validation failed',
       message: error.message,
       details: error.details
     });
+    return;
   }
 
   // Default server error

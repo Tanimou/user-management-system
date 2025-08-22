@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import * as Joi from 'joi';
 
 // User query parameters validation schema
 export const getUsersSchema = Joi.object({
