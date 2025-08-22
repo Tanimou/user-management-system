@@ -1,4 +1,5 @@
 import apiClient from '@/api/axios';
+import type { ApiResponse, AuthResponse, RefreshTokenResponse } from '@/types/api';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 
@@ -184,8 +185,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchProfile() {
     try {
-      const response = await apiClient.get('/me');
-      user.value = response.data.user || response.data.data;
+      const response = await apiClient.get<{ user?: User; data?: User }>('/me');
+      user.value = response.data?.user || response.data?.data || null;
       return user.value;
     } catch (error) {
       throw error;
@@ -198,8 +199,8 @@ export const useAuthStore = defineStore('auth', () => {
     currentPassword?: string;
   }) {
     try {
-      const response = await apiClient.put('/me', data);
-      user.value = response.data.user || response.data.data;
+      const response = await apiClient.put<{ user?: User; data?: User }>('/me', data);
+      user.value = response.data?.user || response.data?.data || null;
       return { success: true };
     } catch (error: any) {
       return {
@@ -211,10 +212,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function refreshToken() {
     try {
-      const response = await apiClient.post('/refresh');
-      const newToken = response.data.token;
-      token.value = newToken;
-      localStorage.setItem('auth_token', newToken);
+      const response = await apiClient.post<{ token: string }>('/refresh');
+      const newToken = response.data?.token;
+      if (newToken) {
+        token.value = newToken;
+        localStorage.setItem('auth_token', newToken);
+      }
     } catch (error) {
       // If refresh fails, logout user
       await logout();

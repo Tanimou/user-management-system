@@ -5,38 +5,38 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/Login.vue'),
+    component: () => import('@/pages/auth/LoginPage.vue'),
     meta: { requiresAuth: false }
   },
   {
     path: '/',
     name: 'Dashboard',
-    component: () => import('@/views/Dashboard.vue'),
+    component: () => import('@/pages/dashboard/DashboardPage.vue'),
     meta: { requiresAuth: true }
   },
   {
     path: '/users',
     name: 'Users',
-    component: () => import('@/views/Dashboard.vue'),
+    component: () => import('@/pages/dashboard/DashboardPage.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
     path: '/profile',
     name: 'Profile',
-    component: () => import('@/views/Dashboard.vue'),
+    component: () => import('@/pages/dashboard/DashboardPage.vue'),
     meta: { requiresAuth: true }
   },
   // Demo routes without auth for testing
   {
     path: '/demo-user',
     name: 'DemoUser',
-    component: () => import('@/views/Dashboard.vue'),
+    component: () => import('@/pages/dashboard/DashboardPage.vue'),
     meta: { demo: 'user' }
   },
   {
     path: '/demo-admin',
     name: 'DemoAdmin',
-    component: () => import('@/views/Dashboard.vue'),
+    component: () => import('@/pages/dashboard/DashboardPage.vue'),
     meta: { demo: 'admin' }
   },
   // Redirect /dashboard to /
