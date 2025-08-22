@@ -101,7 +101,7 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     }
 
     // Get total count first for page validation
-    const total = await prisma.user.count({ where });
+    let total = await prisma.user.count({ where });
     const maxPages = Math.max(1, Math.ceil(total / pageSize));
     
     // Ensure page number doesn't exceed available pages
