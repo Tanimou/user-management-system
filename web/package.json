@@ -15,7 +15,6 @@
     "format:check": "prettier --check \"**/*.{vue,ts,js,json,css,md}\""
   },
   "dependencies": {
-    "@vercel/node": "^2.15.10",
     "@vicons/ionicons5": "^0.12.0",
     "@vueuse/core": "^10.7.0",
     "axios": "^1.6.2",
