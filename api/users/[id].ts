@@ -7,7 +7,7 @@ import {
   setSecurityHeaders,
   type AuthenticatedRequest,
 } from '../lib/auth.js';
-import prisma from '../lib/prisma.js';
+import prisma, { USER_SELECT_FIELDS } from '../lib/prisma.js';
 import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
 import { validateRoles, preventSelfDemotion, preventSelfDeactivation } from '../lib/role-validation.js';
 import { logRoleChange, logStatusChange, logUserDeletion } from '../lib/audit-logger.js';
@@ -48,16 +48,7 @@ async function handleGetUser(req: AuthenticatedRequest, res: VercelResponse, use
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        avatarUrl: true,
-      },
+      select: USER_SELECT_FIELDS,
     });
 
     if (!user) {
@@ -169,16 +160,7 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        avatarUrl: true,
-      },
+      select: USER_SELECT_FIELDS,
     });
 
     // Log role changes for audit trail
@@ -235,16 +217,7 @@ async function handleDeleteUser(req: AuthenticatedRequest, res: VercelResponse, 
     const deletedUser = await prisma.user.update({
       where: { id: userId },
       data: { isActive: false },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        avatarUrl: true,
-      },
+      select: USER_SELECT_FIELDS,
     });
 
     // Log user deletion for audit trail

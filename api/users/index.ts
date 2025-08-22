@@ -7,7 +7,7 @@ import {
   setSecurityHeaders,
   type AuthenticatedRequest,
 } from '../lib/auth.js';
-import prisma from '../lib/prisma.js';
+import prisma, { USER_SELECT_FIELDS } from '../lib/prisma.js';
 import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
 import { validateRoles } from '../lib/role-validation.js';
 import { logUserCreation } from '../lib/audit-logger.js';
@@ -121,16 +121,7 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     // Execute user query (total count already retrieved above)
     const users = await prisma.user.findMany({
       where,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        avatarUrl: true,
-      },
+      select: USER_SELECT_FIELDS,
       orderBy: { [sortField]: sortOrder },
       skip,
       take: pageSize,
@@ -239,31 +230,13 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
       user = await prisma.user.update({
         where: { id: existingUser.id },
         data: userData,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-          avatarUrl: true,
-        },
+        select: USER_SELECT_FIELDS,
       });
     } else {
       // Create new user
       user = await prisma.user.create({
         data: userData,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-          avatarUrl: true,
-        },
+        select: USER_SELECT_FIELDS,
       });
     }
 
