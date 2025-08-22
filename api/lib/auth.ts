@@ -135,7 +135,12 @@ export function setSecurityHeaders(res: VercelResponse): void {
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'", // Allow inline scripts for dev, restrict in production
-    "style-src 'self' 'unsafe-inline'",  // Allow inline styles
+    isProduction
+      ? "script-src 'self'"
+      : "script-src 'self' 'unsafe-inline'", // Allow inline scripts for dev, restrict in production
+    isProduction
+      ? "style-src 'self'"
+      : "style-src 'self' 'unsafe-inline'",  // Allow inline styles for dev, restrict in production
     "img-src 'self' data: https:",       // Allow images from self, data URLs, and https
     "font-src 'self' https:",            // Allow fonts from self and https
     "connect-src 'self' https:",         // Allow connections to self and https
