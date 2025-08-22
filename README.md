@@ -11,6 +11,9 @@ A full-stack user management application built with Vue 3 SPA frontend and Verce
 - **Responsive UI** built with Vue 3 + Naive UI
 - **Secure Backend** with argon2id password hashing
 - **Real-time Token Refresh** with automatic retry on 401 errors
+- **Production-Ready Infrastructure** with CI/CD, monitoring, and security scanning
+- **Health Monitoring** with `/health` endpoint for system status
+- **Automated Testing** with 54+ tests covering all functionality
 
 ## 🏗️ Architecture
 
@@ -41,7 +44,8 @@ A full-stack user management application built with Vue 3 SPA frontend and Verce
 │   │   └── [id].ts        # Get/update/delete user
 │   ├── login.ts           # Authentication endpoint
 │   ├── refresh.ts         # Token refresh endpoint
-│   └── me.ts              # Current user profile
+│   ├── me.ts              # Current user profile
+│   └── health.ts          # Health monitoring endpoint
 ├── web/                   # Vue 3 frontend
 │   ├── src/
 │   │   ├── api/           # HTTP client
@@ -49,6 +53,14 @@ A full-stack user management application built with Vue 3 SPA frontend and Verce
 │   │   ├── stores/        # Pinia state management
 │   │   └── views/         # Page components
 │   └── ...
+├── .github/               # CI/CD and automation
+│   ├── workflows/         # GitHub Actions workflows
+│   └── dependabot.yml     # Automated dependency updates
+├── docs/                  # Documentation
+│   ├── DEPLOYMENT.md      # Deployment procedures
+│   ├── OPERATIONS.md      # Operations runbook
+│   ├── LOGGING.md         # Logging strategy
+│   └── INFRASTRUCTURE_SUMMARY.md # Complete infrastructure guide
 └── vercel.json            # Vercel deployment config
 ```
 
@@ -164,6 +176,9 @@ vercel --prod
 - `GET /api/me` - Get current user profile
 - `PUT /api/me` - Update own profile (name, password)
 
+### System Monitoring
+- `GET /health` - System health check and diagnostics
+
 ## 🎨 Frontend Features
 
 ### Login Page
@@ -188,6 +203,65 @@ vercel --prod
 - **Input Validation**: Server-side validation on all endpoints
 - **Business Rules**: Prevents self-demotion and self-deactivation
 - **Soft Delete**: Prevents permanent data loss
+- **Security Scanning**: Automated CodeQL and dependency scanning
+- **Security Headers**: Comprehensive security headers in production
+
+## 🚀 Infrastructure & DevOps
+
+### CI/CD Pipeline
+- **Automated Testing**: 54+ tests run on every push
+- **Security Scanning**: CodeQL analysis and dependency vulnerability checks
+- **Performance Monitoring**: Bundle size analysis and response time tracking
+- **Quality Gates**: ESLint, TypeScript compilation, and security audits
+
+### Production Monitoring
+- **Health Endpoint**: `/health` provides system status and diagnostics
+- **Performance Tracking**: Response time and error rate monitoring
+- **Database Monitoring**: Connection pooling and query performance
+- **Automated Alerts**: Configurable thresholds for critical metrics
+
+### Deployment Features
+- **Zero-Downtime Deployment**: Automatic rollback capabilities
+- **Environment Management**: Separate staging and production environments
+- **Database Migrations**: Automated migration deployment
+- **Security Headers**: Production-ready security configuration
+
+### Documentation
+- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Complete deployment procedures
+- **[OPERATIONS.md](docs/OPERATIONS.md)**: Operations runbook and incident response
+- **[LOGGING.md](docs/LOGGING.md)**: Logging strategy and monitoring guidelines
+- **[INFRASTRUCTURE_SUMMARY.md](docs/INFRASTRUCTURE_SUMMARY.md)**: Complete infrastructure overview
+
+## 📊 Monitoring & Health Checks
+
+### Health Endpoint
+```bash
+curl https://your-domain.com/health
+```
+
+Response:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-01T12:00:00.000Z",
+  "version": "1.0.0",
+  "environment": "production",
+  "uptime": 3600.5,
+  "services": {
+    "database": "connected",
+    "memory": {
+      "used": 45.2,
+      "total": 128.0
+    }
+  }
+}
+```
+
+### Performance Metrics
+- **Response Time**: < 2 seconds target
+- **Error Rate**: < 1% target
+- **Database Queries**: < 500ms target
+- **Uptime**: 99.9% availability target
 
 ## 🧪 Testing
 

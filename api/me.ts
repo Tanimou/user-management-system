@@ -1,12 +1,12 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from './lib/prisma.js';
+import type { VercelResponse } from '@vercel/node';
 import {
-  requireAuth,
   hashPassword,
+  requireAuth,
   setCORSHeaders,
   setSecurityHeaders,
   type AuthenticatedRequest,
 } from './lib/auth.js';
+import prisma from './lib/prisma.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -45,8 +45,8 @@ async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) 
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        avatarUrl: true
-      }
+        avatarUrl: true,
+      },
     });
 
     if (!user || !user.isActive) {
@@ -54,7 +54,6 @@ async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) 
     }
 
     return res.status(200).json({ data: user });
-
   } catch (error) {
     console.error('Get profile error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -102,15 +101,14 @@ async function handleUpdateProfile(req: AuthenticatedRequest, res: VercelRespons
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        avatarUrl: true
-      }
+        avatarUrl: true,
+      },
     });
 
     return res.status(200).json({
       message: 'Profile updated successfully',
-      data: updatedUser
+      data: updatedUser,
     });
-
   } catch (error) {
     console.error('Update profile error:', error);
     return res.status(500).json({ error: 'Internal server error' });

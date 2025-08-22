@@ -93,7 +93,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function updateProfile(data: { name?: string; password?: string }) {
+  async function updateProfile(data: { 
+    name?: string; 
+    password?: string; 
+    currentPassword?: string;
+  }) {
     try {
       const response = await apiClient.put('/me', data);
       user.value = response.data.data;

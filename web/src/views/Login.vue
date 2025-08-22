@@ -133,4 +133,33 @@ async function handleLogin() {
   font-size: 24px;
   font-weight: 600;
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 16px;
+  }
+  
+  .login-card {
+    max-width: 100%;
+  }
+  
+  .login-card :deep(.n-card-header) {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    padding: 12px;
+  }
+  
+  .login-card :deep(.n-card-header) {
+    font-size: 18px;
+  }
+  
+  .login-card :deep(.n-card__content) {
+    padding: 16px;
+  }
+}
 </style>

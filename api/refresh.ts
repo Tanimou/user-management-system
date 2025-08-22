@@ -1,15 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from './lib/prisma.js';
 import {
-  verifyRefreshToken,
-  signAccessToken,
-  signRefreshToken,
-  setRefreshCookie,
   clearRefreshCookie,
   setCORSHeaders,
+  setRefreshCookie,
   setSecurityHeaders,
-  type JWTPayload
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+  type JWTPayload,
 } from './lib/auth.js';
+import prisma from './lib/prisma.js';
 import { createAuthRateLimit } from './lib/rate-limiter.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -29,10 +29,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Apply rate limiting for refresh requests (more lenient than login)
   const rateLimitMiddleware = createAuthRateLimit({
-    windowMs: 15 * 60 * 1000,    // 15 minutes
-    maxRequests: 50,             // 50 refresh attempts per 15 minutes
-    maxFailures: 20,             // 20 failures before backoff
-    blockDurationMs: 60 * 1000   // 1 minute base block duration
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: 50, // 50 refresh attempts per 15 minutes
+    maxFailures: 20, // 20 failures before backoff
+    blockDurationMs: 60 * 1000, // 1 minute base block duration
   });
   if (!rateLimitMiddleware(req, res)) {
     return; // Rate limit exceeded, response already sent
@@ -66,8 +66,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        avatarUrl: true
-      }
+        avatarUrl: true,
+      },
     });
 
     if (!user || !user.isActive) {
@@ -79,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const jwtPayload: JWTPayload = {
       userId: user.id,
       email: user.email,
-      roles: user.roles
+      roles: user.roles,
     };
 
     // Generate new tokens (rotate refresh token)
@@ -93,9 +93,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       message: 'Token refreshed successfully',
       user,
-      accessToken: newAccessToken
+      accessToken: newAccessToken,
     });
-
   } catch (error) {
     console.error('Token refresh error:', error);
     clearRefreshCookie(res);

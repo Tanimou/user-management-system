@@ -1,13 +1,13 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from '../lib/prisma.js';
+import type { VercelResponse } from '@vercel/node';
 import {
+  hashPassword,
   requireAuth,
   requireRole,
-  hashPassword,
   setCORSHeaders,
   setSecurityHeaders,
   type AuthenticatedRequest,
 } from '../lib/auth.js';
+import prisma from '../lib/prisma.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -34,13 +34,13 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
 
 async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
   try {
-    const { 
-      page = '1', 
-      size = '10', 
-      search = '', 
+    const {
+      page = '1',
+      size = '10',
+      search = '',
       active,
       orderBy = 'createdAt',
-      order = 'desc'
+      order = 'desc',
     } = req.query;
 
     // Parse and validate pagination parameters
@@ -55,7 +55,7 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     if (search && typeof search === 'string') {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } }
+        { email: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -67,9 +67,9 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     // Handle sorting
     const validOrderBy = ['name', 'email', 'createdAt'];
     const validOrder = ['asc', 'desc'];
-    
-    const sortField = validOrderBy.includes(orderBy as string) ? orderBy as string : 'createdAt';
-    const sortOrder = validOrder.includes(order as string) ? order as string : 'desc';
+
+    const sortField = validOrderBy.includes(orderBy as string) ? (orderBy as string) : 'createdAt';
+    const sortOrder = validOrder.includes(order as string) ? (order as string) : 'desc';
 
     // Execute queries
     const [users, total] = await Promise.all([
@@ -83,13 +83,13 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
           isActive: true,
           createdAt: true,
           updatedAt: true,
-          avatarUrl: true
+          avatarUrl: true,
         },
         orderBy: { [sortField]: sortOrder },
         skip,
         take: pageSize,
       }),
-      prisma.user.count({ where })
+      prisma.user.count({ where }),
     ]);
 
     const totalPages = Math.ceil(total / pageSize);
@@ -102,10 +102,9 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
         total,
         totalPages,
         hasNext: pageNum < totalPages,
-        hasPrev: pageNum > 1
-      }
+        hasPrev: pageNum > 1,
+      },
     });
-
   } catch (error) {
     console.error('Get users error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -147,7 +146,7 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail }
+      where: { email: normalizedEmail },
     });
 
     if (existingUser && existingUser.isActive) {
@@ -164,7 +163,7 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
       password: hashedPassword,
       roles,
       isActive: true,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     let user;
@@ -181,8 +180,8 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
           isActive: true,
           createdAt: true,
           updatedAt: true,
-          avatarUrl: true
-        }
+          avatarUrl: true,
+        },
       });
     } else {
       // Create new user
@@ -196,23 +195,22 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
           isActive: true,
           createdAt: true,
           updatedAt: true,
-          avatarUrl: true
-        }
+          avatarUrl: true,
+        },
       });
     }
 
     return res.status(201).json({
       message: 'User created successfully',
-      data: user
+      data: user,
     });
-
   } catch (error) {
     console.error('Create user error:', error);
-    
+
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
-    
+
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
