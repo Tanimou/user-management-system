@@ -235,8 +235,8 @@ import {
   FlashOutline as ActivityIcon
 } from '@vicons/ionicons5';
 import { useAuthStore } from '@/stores/auth';
-import PasswordStrengthMeter from './PasswordStrengthMeter.vue';
-import AvatarUpload from './AvatarUpload.vue';
+import PasswordStrengthMeter from '../common/PasswordStrengthMeter.vue';
+import AvatarUpload from '../AvatarUpload.vue';
 import apiClient from '@/api/axios';
 
 interface Props {

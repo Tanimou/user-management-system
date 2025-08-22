@@ -87,7 +87,10 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const response = await apiClient.post('/login', { email, password });
-      const { user: userData, token: accessToken } = response.data; // Updated to match API spec
+      console.log('Login API response:', response);
+      
+      // The login API returns { token, user } directly, not in ApiResponse format
+      const { token: accessToken, user: userData } = response as any;
 
       // Store token based on remember me preference
       if (rememberMe) {
@@ -139,7 +142,8 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchProfile() {
     try {
       const response = await apiClient.get('/me');
-      user.value = response.data.data;
+      const responseData = response.data as any; // Type assertion
+      user.value = responseData.data;
       return user.value;
     } catch (error) {
       throw error;
@@ -153,7 +157,8 @@ export const useAuthStore = defineStore('auth', () => {
   }) {
     try {
       const response = await apiClient.put('/me', data);
-      user.value = response.data.data;
+      const responseData = response.data as any; // Type assertion
+      user.value = responseData.data;
       return { success: true };
     } catch (error: any) {
       return {

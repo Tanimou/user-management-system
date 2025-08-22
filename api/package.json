@@ -27,6 +27,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.6",
     "argon2": "^0.44.0",
+    "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
     "pino": "^9.9.0",
     "pino-pretty": "^13.1.1",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@types/uuid": "^10.0.0",
+    "@types/joi": "^17.2.2",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^8.40.0",
     "@typescript-eslint/project-service": "^8.40.0",

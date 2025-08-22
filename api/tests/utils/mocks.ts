@@ -11,7 +11,7 @@ export function createMockRequest(
   return {
     method,
     query: cookies ? {} : queryOrCookies,
-    headers: {},
+    headers: additional.headers || {},
     body: additional.body || {},
     cookies: cookies || (method === 'POST' ? queryOrCookies : {}),
     ...additional,
@@ -41,10 +41,12 @@ export function createMockUser(
     id,
     name,
     email,
+    password: 'hashed-password', // Add password field for Prisma compatibility
     roles,
     isActive,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null, // Add deletedAt field for soft delete compatibility
     avatarUrl: avatarUrl || null,
   };
 }

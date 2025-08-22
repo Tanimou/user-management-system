@@ -68,3 +68,10 @@ export async function requireUser(
 
 // Export types for convenience
 export type { AuthenticatedRequest, JWTPayload };
+
+// Re-export enhanced middleware components for easy access
+export { preventSelfDemotion, withAdminRole, withRoles, withSelfOrAdmin } from './authorize.js';
+export { withAuth } from './enhanced-auth.js';
+export { withErrorHandling } from './errors.js';
+export { withCORS } from './security.js';
+export { validateBody, validateQuery } from './validation.js';
