@@ -13,6 +13,10 @@
     "build": "npm run build:web && npm run build:api",
     "build:web": "npm run build --workspace=web",
     "build:api": "npm run build --workspace=api",
+    "test": "npm run test:api && npm run test:web",
+    "test:api": "npm run test --workspace=api -- --run",
+    "test:web": "npm run test:run --workspace=web",
+    "test:coverage": "npm run test:coverage --workspace=api",
     "deploy": "vercel --prod",
     "deploy:preview": "vercel",
     "migrate:prod": "tsx scripts/migrate-production.ts",
@@ -34,6 +38,7 @@
   "author": "Development Team",
   "license": "MIT",
   "devDependencies": {
+    "inherits": "^2.0.4",
     "tsx": "^4.20.4",
     "vitest": "^3.2.4"
   }
