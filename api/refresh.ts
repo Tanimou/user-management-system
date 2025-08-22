@@ -11,6 +11,11 @@ import {
 } from './lib/auth.js';
 import prisma from './lib/prisma.js';
 import { createAuthRateLimit } from './lib/rate-limiter.js';
+import { 
+  blacklistRefreshToken, 
+  isTokenBlacklisted, 
+  protectConcurrentRefresh 
+} from './lib/token-blacklist.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -43,61 +48,100 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
-      return res.status(401).json({ error: 'No refresh token provided' });
+      return res.status(401).json({ 
+        error: 'No refresh token provided',
+        code: 'MISSING_REFRESH_TOKEN'
+      });
+    }
+
+    // Check if token is blacklisted (used previously)
+    if (isTokenBlacklisted(refreshToken)) {
+      clearRefreshCookie(res);
+      return res.status(401).json({ 
+        error: 'Refresh token has been revoked',
+        code: 'TOKEN_REVOKED'
+      });
     }
 
     // Verify refresh token
-    let payload: { userId: number };
+    let payload: { userId: number; exp?: number };
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch (error) {
       clearRefreshCookie(res);
-      return res.status(401).json({ error: 'Invalid refresh token' });
+      return res.status(401).json({ 
+        error: 'Invalid or expired refresh token',
+        code: 'INVALID_REFRESH_TOKEN'
+      });
     }
 
-    // Find user and verify they're still active
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        avatarUrl: true,
-      },
+    // Use concurrent refresh protection
+    const result = await protectConcurrentRefresh(payload.userId, async () => {
+      // Find user and verify they're still active
+      const user = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          roles: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+          avatarUrl: true,
+        },
+      });
+
+      if (!user || !user.isActive) {
+        clearRefreshCookie(res);
+        throw new Error('USER_NOT_FOUND');
+      }
+
+      // Blacklist the current refresh token (single-use principle)
+      const expirationTime = payload.exp || Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60); // 7 days fallback
+      blacklistRefreshToken(refreshToken, payload.userId, expirationTime);
+
+      // Create new JWT payload with latest user data
+      const jwtPayload: JWTPayload = {
+        userId: user.id,
+        email: user.email,
+        roles: user.roles,
+      };
+
+      // Generate new tokens (rotate refresh token)
+      const newAccessToken = signAccessToken(jwtPayload);
+      const newRefreshToken = signRefreshToken({ userId: user.id });
+
+      return {
+        user,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken
+      };
     });
 
-    if (!user || !user.isActive) {
-      clearRefreshCookie(res);
-      return res.status(401).json({ error: 'User not found or inactive' });
-    }
-
-    // Create new JWT payload
-    const jwtPayload: JWTPayload = {
-      userId: user.id,
-      email: user.email,
-      roles: user.roles,
-    };
-
-    // Generate new tokens (rotate refresh token)
-    const newAccessToken = signAccessToken(jwtPayload);
-    const newRefreshToken = signRefreshToken({ userId: user.id });
-
     // Set new refresh token cookie
-    setRefreshCookie(res, newRefreshToken);
+    setRefreshCookie(res, result.refreshToken);
 
-    // Return response
+    // Return response in the format specified by the API spec
     return res.status(200).json({
-      message: 'Token refreshed successfully',
-      user,
-      accessToken: newAccessToken,
+      token: result.accessToken,
+      expiresIn: 900, // 15 minutes in seconds
     });
   } catch (error) {
     console.error('Token refresh error:', error);
     clearRefreshCookie(res);
-    return res.status(500).json({ error: 'Internal server error' });
+    
+    // Handle specific errors
+    if (error instanceof Error && error.message === 'USER_NOT_FOUND') {
+      return res.status(401).json({ 
+        error: 'User not found or inactive',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      code: 'INTERNAL_ERROR'
+    });
   }
 }

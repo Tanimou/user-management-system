@@ -46,7 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true;
     try {
       const response = await apiClient.post('/login', { email, password });
-      const { user: userData, accessToken } = response.data;
+      const { user: userData, token: accessToken } = response.data; // Updated to match API spec
       
       // Store token and user
       localStorage.setItem('accessToken', accessToken);
