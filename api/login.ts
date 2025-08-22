@@ -8,7 +8,7 @@ import {
   verifyPassword,
   type JWTPayload,
 } from './lib/auth.js';
-import prisma from "./lib/prisma.js";
+import prisma, { USER_AUTH_SELECT_FIELDS } from "./lib/prisma.js";
 import { createAuthRateLimit, recordAuthFailure, recordAuthSuccess } from './lib/rate-limiter.js';
 import { validatePasswordPolicy } from './lib/validation.js';
 
@@ -60,17 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Find user by email (case-insensitive)
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        password: true,
-        roles: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        avatarUrl: true,
-      },
+      select: USER_AUTH_SELECT_FIELDS,
     });
 
     // Check if user exists and is active

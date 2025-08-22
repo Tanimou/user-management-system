@@ -6,7 +6,7 @@ import {
   setSecurityHeaders,
   type AuthenticatedRequest,
 } from './lib/auth.js';
-import prisma from './lib/prisma.js';
+import prisma, { USER_SELECT_FIELDS } from './lib/prisma.js';
 import { validatePasswordPolicy, validateName } from './lib/validation.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
@@ -38,16 +38,7 @@ async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) 
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        avatarUrl: true,
-      },
+      select: USER_SELECT_FIELDS,
     });
 
     if (!user || !user.isActive) {
@@ -99,16 +90,7 @@ async function handleUpdateProfile(req: AuthenticatedRequest, res: VercelRespons
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        avatarUrl: true,
-      },
+      select: USER_SELECT_FIELDS,
     });
 
     return res.status(200).json({
