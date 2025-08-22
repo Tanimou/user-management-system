@@ -1,5 +1,6 @@
 import { ref, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { DEFAULT_SORT_BY, DEFAULT_SORT_ORDER } from '@/utils/sorting';
 
 interface PaginationState {
   page: number;
@@ -28,8 +29,8 @@ export function usePaginationState(options: PaginationStateOptions = {}) {
     defaultSize = 10,
     defaultSearch = '',
     defaultActive = undefined,
-    defaultSortBy = 'createdAt',
-    defaultSortOrder = 'desc',
+    defaultSortBy = DEFAULT_SORT_BY,
+    defaultSortOrder = DEFAULT_SORT_ORDER,
   } = options;
 
   // Reactive state
