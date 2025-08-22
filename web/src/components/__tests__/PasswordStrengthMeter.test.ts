@@ -23,8 +23,8 @@ vi.mock('@/api/axios', () => ({
 
 // Mock icons
 vi.mock('@vicons/ionicons5', () => ({
-  Checkmark: { template: '<span>✓</span>' },
-  Close: { template: '<span>✗</span>' },
+  CheckmarkOutline: { template: '<span>✓</span>' },
+  CloseOutline: { template: '<span>✗</span>' },
 }));
 
 describe('PasswordStrengthMeter', () => {

@@ -1,6 +1,6 @@
 <template>
 
-  <div v-if="password" class="password-strength">
+  <div v-if="password" class="password-strength-meter">
     <div class="strength-bar">
       <div 
         class="strength-fill" 
@@ -13,34 +13,34 @@
         {{ strengthText }}
       </span>
     </div>
-    <div class="requirements" v-if="showRequirements">
+    <div class="requirements-grid" v-if="showRequirements">
       <p class="requirements-title">Password Requirements:</p>
       <ul class="requirements-list">
-        <li :class="{ met: hasMinLength }">
+        <li class="requirement-item" :class="{ met: hasMinLength }">
           <n-icon :size="14">
             <component :is="hasMinLength ? CheckmarkIcon : CloseIcon" />
           </n-icon>
           At least 8 characters
         </li>
-        <li :class="{ met: hasUppercase }">
+        <li class="requirement-item" :class="{ met: hasUppercase }">
           <n-icon :size="14">
             <component :is="hasUppercase ? CheckmarkIcon : CloseIcon" />
           </n-icon>
           At least one uppercase letter
         </li>
-        <li :class="{ met: hasLowercase }">
+        <li class="requirement-item" :class="{ met: hasLowercase }">
           <n-icon :size="14">
             <component :is="hasLowercase ? CheckmarkIcon : CloseIcon" />
           </n-icon>
           At least one lowercase letter
         </li>
-        <li :class="{ met: hasNumber }">
+        <li class="requirement-item" :class="{ met: hasNumber }">
           <n-icon :size="14">
             <component :is="hasNumber ? CheckmarkIcon : CloseIcon" />
           </n-icon>
           At least one number
         </li>
-        <li :class="{ met: hasSpecial }">
+        <li class="requirement-item" :class="{ met: hasSpecial }">
           <n-icon :size="14">
             <component :is="hasSpecial ? CheckmarkIcon : CloseIcon" />
           </n-icon>
