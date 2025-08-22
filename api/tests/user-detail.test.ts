@@ -7,6 +7,9 @@ vi.mock('../lib/prisma', () => ({
     user: {
       findUnique: vi.fn(),
       update: vi.fn(),
+    },
+    auditLog: {
+      create: vi.fn(),
     }
   }
 }));

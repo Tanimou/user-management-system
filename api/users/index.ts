@@ -69,6 +69,37 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
       where.isActive = active === 'true';
     }
 
+    // Handle role filter
+    if (role && typeof role === 'string') {
+      const validRoles = ['user', 'admin'];
+      if (validRoles.includes(role)) {
+        where.roles = { has: role };
+      }
+    }
+
+    // Handle date range filtering
+    const createdAtFilter: any = {};
+    if (createdFrom && typeof createdFrom === 'string') {
+      try {
+        createdAtFilter.gte = new Date(createdFrom);
+      } catch (error) {
+        // Invalid date format, ignore
+      }
+    }
+    if (createdTo && typeof createdTo === 'string') {
+      try {
+        // Set to end of day for the "to" date
+        const toDate = new Date(createdTo);
+        toDate.setHours(23, 59, 59, 999);
+        createdAtFilter.lte = toDate;
+      } catch (error) {
+        // Invalid date format, ignore
+      }
+    }
+    if (Object.keys(createdAtFilter).length > 0) {
+      where.createdAt = createdAtFilter;
+    }
+
     // Get total count first for page validation
     const total = await prisma.user.count({ where });
     const maxPages = Math.max(1, Math.ceil(total / pageSize));
