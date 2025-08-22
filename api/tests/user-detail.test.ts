@@ -234,7 +234,13 @@ describe('User Detail API - PUT /api/users/{id}', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Password must be at least 8 characters long' });
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Password does not meet policy requirements',
+      details: expect.arrayContaining([
+        'Password must be at least 8 characters long'
+      ]),
+      code: 'INVALID_PASSWORD_POLICY'
+    });
   });
 });
 
