@@ -53,7 +53,7 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
 
 async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse): Promise<void> {
   // Query parameters are already validated by middleware
-  const { page, size, search, active, sort, order } = req.query as any;
+  const { page, size, search, active, role, createdFrom, createdTo, sort, order } = req.query as any;
 
   const where: any = {};
 
@@ -68,6 +68,29 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse): P
   // Handle active filter
   if (active !== undefined) {
     where.isActive = active;
+  }
+
+  // Handle role filter
+  if (role && typeof role === 'string') {
+    const validRoles = ['user', 'admin'];
+    if (validRoles.includes(role)) {
+      where.roles = { has: role };
+    }
+  }
+
+  // Handle date range filtering
+  const createdAtFilter: any = {};
+  if (createdFrom && typeof createdFrom === 'object' && createdFrom instanceof Date) {
+    createdAtFilter.gte = createdFrom;
+  }
+  if (createdTo && typeof createdTo === 'object' && createdTo instanceof Date) {
+    // Set to end of day for the "to" date
+    const toDate = new Date(createdTo);
+    toDate.setHours(23, 59, 59, 999);
+    createdAtFilter.lte = toDate;
+  }
+  if (Object.keys(createdAtFilter).length > 0) {
+    where.createdAt = createdAtFilter;
   }
 
   // Get total count

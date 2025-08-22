@@ -37,6 +37,10 @@ async function handleGetDeactivatedUsers(req: AuthenticatedRequest, res: VercelR
   // Query parameters are already validated by middleware, admin role already checked
   const { page, size, search, sort, order } = req.query as any;
 
+  // Override default sort for deactivated users (schema defaults to 'createdAt')
+  const actualSort = (sort === 'createdAt') ? 'deletedAt' : sort;
+  const actualOrder = order || 'desc';
+
   // Build where clause - only deactivated users
   const where: any = {
     isActive: false,
@@ -68,7 +72,7 @@ async function handleGetDeactivatedUsers(req: AuthenticatedRequest, res: VercelR
         deletedAt: true,
         avatarUrl: true,
       },
-      orderBy: { [sort]: order },
+      orderBy: { [actualSort]: actualOrder },
       skip,
       take: size,
     }),

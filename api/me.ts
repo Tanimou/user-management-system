@@ -41,6 +41,7 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
     await updateProfileHandler(req, res);
   } else {
     res.status(405).json({ error: 'Method not allowed' });
+  }
 }
 
 async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) {

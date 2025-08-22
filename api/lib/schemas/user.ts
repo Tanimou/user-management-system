@@ -6,6 +6,9 @@ export const getUsersSchema = Joi.object({
   size: Joi.number().integer().min(1).max(50).default(10),
   search: Joi.string().allow('').max(100).optional(),
   active: Joi.boolean().optional(),
+  role: Joi.string().valid('user', 'admin').optional(),
+  createdFrom: Joi.date().iso().optional(),
+  createdTo: Joi.date().iso().optional(),
   sort: Joi.string().valid('name', 'email', 'createdAt').default('createdAt'),
   order: Joi.string().valid('asc', 'desc').default('desc')
 });
