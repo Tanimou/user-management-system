@@ -111,6 +111,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function updateUser(userData: Partial<User>) {
+    if (user.value) {
+      user.value = { ...user.value, ...userData };
+    }
+  }
+
   return {
     // State
     user,
@@ -124,5 +130,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     fetchProfile,
     updateProfile,
+    updateUser,
   };
 });

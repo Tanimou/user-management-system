@@ -1,109 +1,243 @@
 <template>
-  <n-modal v-model:show="show" preset="dialog" title="User Profile">
-    <n-form
-      ref="formRef"
-      :model="formData"
-      :rules="rules"
-      label-placement="top"
-      @submit.prevent="handleSubmit"
-    >
-      <n-form-item label="Name" path="name">
-        <n-input
-          v-model:value="formData.name"
-          placeholder="Enter your full name"
-          :maxlength="120"
-          show-count
-        />
-      </n-form-item>
+  <n-modal v-model:show="show" style="width: 90vw; max-width: 800px">
+    <n-card title="Personal Profile" :bordered="false" size="huge" role="dialog" aria-modal="true">
+      <template #header-extra>
+        <n-button quaternary circle @click="handleCancel">
+          <template #icon>
+            <n-icon><CloseIcon /></n-icon>
+          </template>
+        </n-button>
+      </template>
 
-      <n-form-item label="Email" path="email">
-        <n-input
-          v-model:value="formData.email"
-          type="email"
-          placeholder="Your email address"
-          disabled
-          :title="'Email cannot be changed'"
-        />
-      </n-form-item>
-
-      <n-form-item label="Current Password" path="currentPassword">
-        <n-input
-          v-model:value="formData.currentPassword"
-          type="password"
-          placeholder="Enter current password to change it"
-          show-password-on="mousedown"
-          clearable
-        />
-      </n-form-item>
-
-      <n-form-item v-if="formData.currentPassword" label="New Password" path="newPassword">
-        <n-input
-          v-model:value="formData.newPassword"
-          type="password"
-          placeholder="Enter new password"
-          show-password-on="mousedown"
-          clearable
-        />
-      </n-form-item>
-
-      <n-form-item v-if="formData.newPassword" label="Confirm New Password" path="confirmPassword">
-        <n-input
-          v-model:value="formData.confirmPassword"
-          type="password"
-          placeholder="Confirm new password"
-          show-password-on="mousedown"
-          clearable
-        />
-      </n-form-item>
-
-      <n-divider />
-
-      <div class="profile-info">
-        <n-descriptions :column="1" bordered>
-          <n-descriptions-item label="User ID">
-            {{ authStore.user?.id }}
-          </n-descriptions-item>
-          <n-descriptions-item label="Roles">
-            <n-space>
+      <div class="profile-container">
+        <!-- Profile Header Section -->
+        <div class="profile-header">
+          <div class="profile-avatar">
+            <n-avatar 
+              :size="80" 
+              :src="authStore.user?.avatarUrl" 
+              :fallback-src="defaultAvatarUrl"
+              round
+            >
+              <template #fallback>
+                <n-icon :size="40"><PersonIcon /></n-icon>
+              </template>
+            </n-avatar>
+            <n-button 
+              size="small" 
+              secondary 
+              type="primary"
+              @click="showAvatarUpload = true" 
+              class="change-avatar-btn"
+            >
+              Change Photo
+            </n-button>
+          </div>
+          
+          <div class="profile-info">
+            <h2>{{ authStore.user?.name }}</h2>
+            <p class="email">{{ authStore.user?.email }}</p>
+            <div class="role-badges">
               <n-tag 
                 v-for="role in authStore.user?.roles" 
-                :key="role"
-                :type="role === 'admin' ? 'warning' : 'info'"
+                :key="role" 
+                :type="role === 'admin' ? 'success' : 'info'"
+                round
               >
-                {{ role }}
+                {{ capitalizeRole(role) }}
               </n-tag>
-            </n-space>
-          </n-descriptions-item>
-          <n-descriptions-item label="Account Status">
-            <n-tag :type="authStore.user?.isActive ? 'success' : 'error'">
-              {{ authStore.user?.isActive ? 'Active' : 'Inactive' }}
-            </n-tag>
-          </n-descriptions-item>
-          <n-descriptions-item label="Member Since">
-            {{ formatDate(authStore.user?.createdAt) }}
-          </n-descriptions-item>
-          <n-descriptions-item v-if="authStore.user?.updatedAt" label="Last Updated">
-            {{ formatDate(authStore.user?.updatedAt) }}
-          </n-descriptions-item>
-        </n-descriptions>
-      </div>
+            </div>
+            <div class="account-meta">
+              <p><strong>Member since:</strong> {{ formatDate(authStore.user?.createdAt) }}</p>
+              <p v-if="authStore.user?.updatedAt"><strong>Last updated:</strong> {{ formatRelativeTime(authStore.user?.updatedAt) }}</p>
+              <div class="status-indicator">
+                <n-tag :type="authStore.user?.isActive ? 'success' : 'error'" round>
+                  {{ authStore.user?.isActive ? 'Active' : 'Inactive' }}
+                </n-tag>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <div class="form-actions">
-        <n-space>
-          <n-button @click="handleCancel">Cancel</n-button>
-          <n-button type="primary" :loading="loading" @click="handleSubmit">
-            Update Profile
-          </n-button>
-        </n-space>
+        <n-divider />
+
+        <!-- Profile Content Sections -->
+        <div class="profile-content">
+          <!-- Account Information Section -->
+          <section class="profile-section">
+            <h3><n-icon><InformationCircleIcon /></n-icon> Account Information</h3>
+            <n-form
+              ref="formRef"
+              :model="formData"
+              :rules="rules"
+              label-placement="top"
+              @submit.prevent="handleSubmit"
+            >
+              <div class="form-grid">
+                <n-form-item label="Full Name" path="name">
+                  <n-input
+                    v-model:value="formData.name"
+                    placeholder="Enter your full name"
+                    :maxlength="120"
+                    show-count
+                  />
+                </n-form-item>
+
+                <n-form-item label="Email Address" path="email">
+                  <n-input
+                    v-model:value="formData.email"
+                    type="email"
+                    placeholder="Your email address"
+                    disabled
+                    :title="'Email cannot be changed'"
+                  />
+                </n-form-item>
+              </div>
+              
+              <div class="account-details">
+                <div class="detail-item">
+                  <label>Account Type</label>
+                  <span>{{ authStore.user?.roles.includes('admin') ? 'Administrator' : 'Standard User' }}</span>
+                </div>
+                <div class="detail-item">
+                  <label>User ID</label>
+                  <span>#{{ authStore.user?.id }}</span>
+                </div>
+              </div>
+            </n-form>
+          </section>
+
+          <!-- Security Section -->
+          <section class="profile-section">
+            <h3><n-icon><LockClosedIcon /></n-icon> Security</h3>
+            <div class="security-section">
+              <div class="security-item">
+                <div class="security-info">
+                  <h4>Password</h4>
+                  <p>Keep your account secure with a strong password</p>
+                </div>
+                <n-button @click="showPasswordForm = !showPasswordForm">
+                  {{ showPasswordForm ? 'Cancel' : 'Change Password' }}
+                </n-button>
+              </div>
+              
+              <div v-if="showPasswordForm" class="password-form">
+                <n-form :model="formData" :rules="rules">
+                  <n-form-item label="Current Password" path="currentPassword">
+                    <n-input
+                      v-model:value="formData.currentPassword"
+                      type="password"
+                      placeholder="Enter your current password"
+                      show-password-on="mousedown"
+                      clearable
+                    />
+                  </n-form-item>
+
+                  <n-form-item v-if="formData.currentPassword" label="New Password" path="newPassword">
+                    <n-input
+                      v-model:value="formData.newPassword"
+                      type="password"
+                      placeholder="Enter new password"
+                      show-password-on="mousedown"
+                      clearable
+                    />
+                    <password-strength-meter 
+                      :password="formData.newPassword" 
+                      :show-requirements="true"
+                    />
+                  </n-form-item>
+
+                  <n-form-item v-if="formData.newPassword" label="Confirm New Password" path="confirmPassword">
+                    <n-input
+                      v-model:value="formData.confirmPassword"
+                      type="password"
+                      placeholder="Confirm your new password"
+                      show-password-on="mousedown"
+                      clearable
+                    />
+                  </n-form-item>
+                </n-form>
+              </div>
+              
+              <div class="security-item future-feature">
+                <div class="security-info">
+                  <h4>Two-Factor Authentication</h4>
+                  <p>Add an extra layer of security to your account</p>
+                </div>
+                <n-button disabled secondary>
+                  Enable 2FA (Coming Soon)
+                </n-button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Activity History Section -->
+          <section class="profile-section">
+            <h3><n-icon><TimeIcon /></n-icon> Recent Activity</h3>
+            <div class="activity-section">
+              <div v-if="recentActivity.length === 0" class="no-activity">
+                <n-empty description="No recent activity to display" />
+              </div>
+              <div 
+                v-for="activity in recentActivity" 
+                :key="activity.id" 
+                class="activity-item"
+              >
+                <n-icon :size="16"><ActivityIcon /></n-icon>
+                <div class="activity-details">
+                  <p>{{ activity.description }}</p>
+                  <small>{{ formatRelativeTime(activity.timestamp) }}</small>
+                </div>
+              </div>
+              <div v-if="recentActivity.length === 0" class="activity-placeholder">
+                <p>Activity history will appear here once available.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <n-space>
+            <n-button @click="handleCancel">Cancel</n-button>
+            <n-button 
+              type="primary" 
+              :loading="loading" 
+              @click="handleSubmit"
+              :disabled="!hasChanges"
+            >
+              Save Changes
+            </n-button>
+          </n-space>
+        </div>
       </div>
-    </n-form>
+    </n-card>
   </n-modal>
+
+  <!-- Avatar Upload Modal -->
+  <avatar-upload 
+    v-model:show="showAvatarUpload" 
+    :current-avatar="authStore.user?.avatarUrl"
+    @avatar-updated="handleAvatarUpdated"
+    @cancel="showAvatarUpload = false"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
+import { 
+  PersonOutline as PersonIcon,
+  CloseOutline as CloseIcon,
+  InformationCircleOutline as InformationCircleIcon,
+  LockClosedOutline as LockClosedIcon,
+  TimeOutline as TimeIcon,
+  FlashOutline as ActivityIcon
+} from '@vicons/ionicons5';
 import { useAuthStore } from '@/stores/auth';
+import PasswordStrengthMeter from './PasswordStrengthMeter.vue';
+import AvatarUpload from './AvatarUpload.vue';
+import apiClient from '@/api/axios';
 
 interface Props {
   show: boolean;
@@ -112,6 +246,12 @@ interface Props {
 interface Emits {
   (e: 'update:show', value: boolean): void;
   (e: 'updated'): void;
+}
+
+interface Activity {
+  id: string;
+  description: string;
+  timestamp: string;
 }
 
 const props = defineProps<Props>();
@@ -123,6 +263,10 @@ const authStore = useAuthStore();
 // Form refs
 const formRef = ref();
 const loading = ref(false);
+const showPasswordForm = ref(false);
+const showAvatarUpload = ref(false);
+const recentActivity = ref<Activity[]>([]);
+const defaultAvatarUrl = '/default-avatar.png'; // Placeholder for default avatar
 
 // Form data
 const formData = reactive({
@@ -133,12 +277,29 @@ const formData = reactive({
   confirmPassword: '',
 });
 
+// Original form data for change detection
+const originalFormData = ref({
+  name: '',
+  email: ''
+});
+
 // Form validation rules
 const rules = {
   name: [
     { required: true, message: 'Name is required', trigger: 'blur' },
     { min: 2, message: 'Name must be at least 2 characters', trigger: 'blur' },
     { max: 120, message: 'Name must not exceed 120 characters', trigger: 'blur' }
+  ],
+  currentPassword: [
+    {
+      validator: (_rule: any, value: string) => {
+        if (formData.newPassword && !value) {
+          return new Error('Current password is required to change password');
+        }
+        return true;
+      },
+      trigger: 'blur'
+    }
   ],
   newPassword: [
     {
@@ -170,13 +331,33 @@ const show = computed({
   set: (value) => emit('update:show', value)
 });
 
+const hasChanges = computed(() => {
+  const nameChanged = formData.name !== originalFormData.value.name;
+  const passwordChanging = formData.currentPassword && formData.newPassword && formData.confirmPassword;
+  return nameChanged || passwordChanging;
+});
+
 // Methods
 function resetForm() {
-  formData.name = authStore.user?.name || '';
-  formData.email = authStore.user?.email || '';
+  const user = authStore.user;
+  formData.name = user?.name || '';
+  formData.email = user?.email || '';
   formData.currentPassword = '';
   formData.newPassword = '';
   formData.confirmPassword = '';
+  
+  // Store original data for change detection
+  originalFormData.value = {
+    name: user?.name || '',
+    email: user?.email || ''
+  };
+  
+  // Reset password form visibility
+  showPasswordForm.value = false;
+}
+
+function capitalizeRole(role: string) {
+  return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
 async function handleSubmit() {
@@ -184,14 +365,23 @@ async function handleSubmit() {
     await formRef.value?.validate();
     loading.value = true;
 
-    const updateData: any = {
-      name: formData.name
-    };
+    const updateData: any = {};
+
+    // Only include name if it changed
+    if (formData.name !== originalFormData.value.name) {
+      updateData.name = formData.name;
+    }
 
     // Only include password if user wants to change it
     if (formData.currentPassword && formData.newPassword) {
       updateData.currentPassword = formData.currentPassword;
       updateData.password = formData.newPassword;
+    }
+
+    // Don't make request if nothing to update
+    if (Object.keys(updateData).length === 0) {
+      message.warning('No changes to save');
+      return;
     }
 
     const result = await authStore.updateProfile(updateData);
@@ -217,41 +407,301 @@ function handleCancel() {
 
 function formatDate(dateString: string | undefined) {
   if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleString();
+  return new Date(dateString).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
 }
 
-// Watch for modal open to reset form
+function formatRelativeTime(dateString: string | undefined) {
+  if (!dateString) return 'N/A';
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffMs = now.getTime() - past.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`;
+  return formatDate(dateString);
+}
+
+// Load recent activity (placeholder implementation)
+async function loadRecentActivity() {
+  try {
+    // This would typically fetch from /api/me/activity or similar
+    // For now, we'll create placeholder data
+    recentActivity.value = [
+      // Placeholder - in real implementation this would come from API
+    ];
+  } catch (error) {
+    console.log('Could not load activity history:', error);
+    recentActivity.value = [];
+  }
+}
+
+// Handle avatar update
+function handleAvatarUpdated(avatarUrl: string) {
+  // In a real implementation, this would save to backend
+  // For now, we'll just update the auth store
+  authStore.updateUser({ avatarUrl });
+  showAvatarUpload.value = false;
+}
+
+// Watch for modal open to reset form and load data
 watch(() => props.show, (newShow) => {
   if (newShow) {
     resetForm();
+    loadRecentActivity();
   }
 });
 </script>
 
 <style scoped>
-.profile-info {
-  margin: 24px 0;
+.profile-container {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.profile-header {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.profile-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.change-avatar-btn {
+  font-size: 12px;
+}
+
+.profile-info h2 {
+  margin: 0 0 8px 0;
+  color: var(--text-color-1);
+}
+
+.profile-info .email {
+  color: var(--text-color-2);
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.role-badges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.account-meta p {
+  margin: 4px 0;
+  font-size: 13px;
+  color: var(--text-color-2);
+}
+
+.account-meta strong {
+  color: var(--text-color-1);
+}
+
+.status-indicator {
+  margin-top: 8px;
+}
+
+.profile-content {
+  space-y: 24px;
+}
+
+.profile-section {
+  margin-bottom: 32px;
+}
+
+.profile-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px 0;
+  color: var(--text-color-1);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.account-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--card-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item label {
+  font-size: 12px;
+  color: var(--text-color-2);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-item span {
+  font-size: 14px;
+  color: var(--text-color-1);
+}
+
+.security-section {
+  space-y: 16px;
+}
+
+.security-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  background-color: var(--card-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+
+.security-item.future-feature {
+  opacity: 0.6;
+}
+
+.security-info h4 {
+  margin: 0 0 4px 0;
+  color: var(--text-color-1);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.security-info p {
+  margin: 0;
+  color: var(--text-color-2);
+  font-size: 13px;
+}
+
+.password-form {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--body-color);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.activity-section {
+  min-height: 120px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 8px;
+  background-color: var(--card-color);
+}
+
+.activity-details p {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: var(--text-color-1);
+}
+
+.activity-details small {
+  color: var(--text-color-3);
+  font-size: 12px;
+}
+
+.activity-placeholder {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-color-3);
+}
+
+.no-activity {
+  padding: 24px 0;
 }
 
 .form-actions {
-  margin-top: 24px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .profile-info {
-    margin: 16px 0;
+  .profile-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
   }
   
-  :deep(.n-descriptions) {
-    font-size: 14px;
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .account-details {
+    grid-template-columns: 1fr;
+  }
+  
+  .security-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .profile-section h3 {
+    font-size: 15px;
   }
 }
 
 @media (max-width: 480px) {
+  .profile-container {
+    padding: 8px;
+  }
+  
+  .profile-header {
+    gap: 12px;
+  }
+  
+  .profile-avatar :deep(.n-avatar) {
+    width: 64px;
+    height: 64px;
+  }
+  
+  .change-avatar-btn {
+    font-size: 11px;
+  }
+  
+  .profile-info h2 {
+    font-size: 18px;
+  }
+  
   .form-actions {
     flex-direction: column;
     gap: 8px;
@@ -261,12 +711,23 @@ watch(() => props.show, (newShow) => {
     width: 100%;
   }
   
-  :deep(.n-descriptions) {
-    font-size: 12px;
+  .account-details,
+  .security-item,
+  .activity-item {
+    padding: 12px;
+  }
+}
+
+/* Dark theme adjustments */
+@media (prefers-color-scheme: dark) {
+  .account-details,
+  .security-item,
+  .activity-item {
+    background-color: rgba(255, 255, 255, 0.05);
   }
   
-  :deep(.n-descriptions-item-label) {
-    min-width: 80px;
+  .password-form {
+    background-color: rgba(0, 0, 0, 0.2);
   }
 }
 </style>
