@@ -84,6 +84,7 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
           isActive: true,
           createdAt: true,
           updatedAt: true,
+          deletedAt: true,
           avatarUrl: true,
         },
         orderBy: { [sortField]: sortOrder },
@@ -182,6 +183,7 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
       password: hashedPassword,
       roles,
       isActive: true,
+      deletedAt: null,
       updatedAt: new Date(),
     };
 
@@ -199,6 +201,7 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
           isActive: true,
           createdAt: true,
           updatedAt: true,
+          deletedAt: true,
           avatarUrl: true,
         },
       });
@@ -214,6 +217,7 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
           isActive: true,
           createdAt: true,
           updatedAt: true,
+          deletedAt: true,
           avatarUrl: true,
         },
       });

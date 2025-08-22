@@ -267,7 +267,10 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
 
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 2 },
-      data: { isActive: false },
+      data: { 
+        isActive: false,
+        deletedAt: expect.any(Date)
+      },
       select: expect.any(Object)
     });
     expect(res.status).toHaveBeenCalledWith(200);
@@ -331,5 +334,104 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
+  });
+});
+
+describe('User Detail API - POST /api/users/{id} (restore)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireAuth).mockResolvedValue(true);
+    vi.mocked(requireRole).mockReturnValue(true);
+  });
+
+  it('should restore deactivated user when admin', async () => {
+    const deactivatedUser = createMockUser(2, 'Deactivated User', 'inactive@example.com', false);
+    const restoredUser = { ...deactivatedUser, isActive: true, deletedAt: null };
+    
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(deactivatedUser);
+    vi.mocked(prisma.user.update).mockResolvedValue(restoredUser);
+
+    const req = createMockRequest('POST', { id: '2' }, {
+      user: { userId: 1, roles: ['admin'] },
+      body: { action: 'restore' }
+    });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 2 },
+      data: { 
+        isActive: true,
+        deletedAt: null,
+        updatedAt: expect.any(Date)
+      },
+      select: expect.any(Object)
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'User restored successfully',
+      data: restoredUser
+    });
+  });
+
+  it('should prevent non-admin from restoring', async () => {
+    vi.mocked(requireRole).mockReturnValue(false);
+
+    const req = createMockRequest('POST', { id: '2' }, {
+      user: { userId: 1, roles: ['user'] },
+      body: { action: 'restore' }
+    });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Admin role required' });
+  });
+
+  it('should handle already active user', async () => {
+    const activeUser = createMockUser(2, 'Active User', 'active@example.com', true);
+    
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(activeUser);
+
+    const req = createMockRequest('POST', { id: '2' }, {
+      user: { userId: 1, roles: ['admin'] },
+      body: { action: 'restore' }
+    });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'User is already active' });
+  });
+
+  it('should handle non-existent user for restore', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+
+    const req = createMockRequest('POST', { id: '999' }, {
+      user: { userId: 1, roles: ['admin'] },
+      body: { action: 'restore' }
+    });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
+  });
+
+  it('should handle invalid action', async () => {
+    const req = createMockRequest('POST', { id: '2' }, {
+      user: { userId: 1, roles: ['admin'] },
+      body: { action: 'invalid' }
+    });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Invalid action' });
   });
 });

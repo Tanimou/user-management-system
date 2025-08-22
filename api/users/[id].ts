@@ -37,6 +37,14 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
     return handleUpdateUser(req, res, userId);
   } else if (req.method === 'DELETE') {
     return handleDeleteUser(req, res, userId);
+  } else if (req.method === 'POST') {
+    // Handle restore action
+    const { action } = req.body;
+    if (action === 'restore') {
+      return handleRestoreUser(req, res, userId);
+    } else {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
   } else {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -54,6 +62,7 @@ async function handleGetUser(req: AuthenticatedRequest, res: VercelResponse, use
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        deletedAt: true,
         avatarUrl: true,
       },
     });
@@ -170,6 +179,7 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        deletedAt: true,
         avatarUrl: true,
       },
     });
@@ -214,10 +224,13 @@ async function handleDeleteUser(req: AuthenticatedRequest, res: VercelResponse, 
       return res.status(400).json({ error: 'User is already deleted' });
     }
 
-    // Soft delete (set isActive = false)
+    // Soft delete (set isActive = false and deletedAt timestamp)
     const deletedUser = await prisma.user.update({
       where: { id: userId },
-      data: { isActive: false },
+      data: { 
+        isActive: false,
+        deletedAt: new Date()
+      },
       select: {
         id: true,
         name: true,
@@ -226,6 +239,7 @@ async function handleDeleteUser(req: AuthenticatedRequest, res: VercelResponse, 
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        deletedAt: true,
         avatarUrl: true,
       },
     });
@@ -236,6 +250,57 @@ async function handleDeleteUser(req: AuthenticatedRequest, res: VercelResponse, 
     });
   } catch (error) {
     console.error('Delete user error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+async function handleRestoreUser(req: AuthenticatedRequest, res: VercelResponse, userId: number) {
+  try {
+    // Check if user has admin role
+    if (!requireRole(req.user, ['admin'])) {
+      return res.status(403).json({ error: 'Admin role required' });
+    }
+
+    // Find user
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (existingUser.isActive) {
+      return res.status(400).json({ error: 'User is already active' });
+    }
+
+    // Restore user (set isActive = true and clear deletedAt)
+    const restoredUser = await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        isActive: true,
+        deletedAt: null,
+        updatedAt: new Date()
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+        avatarUrl: true,
+      },
+    });
+
+    return res.status(200).json({
+      message: 'User restored successfully',
+      data: restoredUser,
+    });
+  } catch (error) {
+    console.error('Restore user error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
