@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { setCORSHeaders, setSecurityHeaders } from './lib/auth.js';
+import { testDatabaseConnection } from './lib/prisma.js';
+import DatabaseMonitor from './lib/db-monitoring.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -16,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Basic health check
+    // Basic health check data
     const healthStatus = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -24,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       environment: process.env.NODE_ENV || 'unknown',
       uptime: process.uptime(),
       services: {
-        database: 'unknown', // Could add DB ping here
+        database: 'unknown',
         memory: {
           used: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100,
           total: Math.round((process.memoryUsage().heapTotal / 1024 / 1024) * 100) / 100
@@ -32,22 +34,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     };
 
-    // Optional: Add database connectivity check
+    // Test database connectivity
     if (process.env.DATABASE_URL) {
       try {
-        const { PrismaClient } = await import('@prisma/client');
-        const prisma = new PrismaClient();
-        await prisma.$queryRaw`SELECT 1`;
-        healthStatus.services.database = 'connected';
-        await prisma.$disconnect();
+        const dbTest = await testDatabaseConnection();
+        healthStatus.services.database = dbTest.status;
+        
+        // Add detailed database metrics if requested and in development
+        const includeMetrics = req.query.detailed === 'true' && process.env.NODE_ENV !== 'production';
+        
+        if (includeMetrics && dbTest.status === 'connected') {
+          try {
+            const [connectionPool, dbSize] = await Promise.allSettled([
+              DatabaseMonitor.getConnectionPoolStatus(),
+              DatabaseMonitor.getDatabaseSize()
+            ]);
+            
+            (healthStatus.services as any).databaseDetails = {
+              connectionPool: connectionPool.status === 'fulfilled' ? connectionPool.value : null,
+              size: dbSize.status === 'fulfilled' ? dbSize.value : null,
+              latency: dbTest.latency ? `${Date.now() - dbTest.latency}ms` : null
+            };
+          } catch (metricsError) {
+            console.warn('Failed to get detailed database metrics:', metricsError);
+          }
+        }
+        
+        if (dbTest.status === 'disconnected' && process.env.NODE_ENV === 'production') {
+          return res.status(503).json({
+            ...healthStatus,
+            status: 'unhealthy',
+            error: 'Database connection failed',
+            details: dbTest.error
+          });
+        }
       } catch (dbError) {
-        healthStatus.services.database = 'disconnected';
-        // Don't fail health check for DB issues in development
+        healthStatus.services.database = 'error';
+        
+        // In production, fail the health check if database is unreachable
         if (process.env.NODE_ENV === 'production') {
           return res.status(503).json({
             ...healthStatus,
             status: 'unhealthy',
-            error: 'Database connection failed'
+            error: 'Database connection error'
           });
         }
       }
