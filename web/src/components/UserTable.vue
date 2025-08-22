@@ -48,23 +48,19 @@ const authStore = useAuthStore();
 // const paginationReactive = computed(() => ({...})); // REMOVED
 
 // Table columns
-const columns: DataTableColumns<User> = [
+const columns = computed<DataTableColumns<User>>(() => [
   { title: 'ID', key: 'id', width: 80 },
   { 
     title: 'Name', 
     key: 'name',
     sorter: true,
-
-    sortOrder: props.sorting.sortBy === 'name' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : undefined
-
+    sortOrder: getColumnSortOrder('name', props.sorting.sortBy, props.sorting.sortOrder)
   },
   { 
     title: 'Email', 
     key: 'email',
     sorter: true,
-
-    sortOrder: props.sorting.sortBy === 'email' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : undefined
-
+    sortOrder: getColumnSortOrder('email', props.sorting.sortBy, props.sorting.sortOrder)
   },
   {
     title: 'Roles',
@@ -91,9 +87,7 @@ const columns: DataTableColumns<User> = [
     title: 'Created',
     key: 'createdAt',
     sorter: true,
-
-    sortOrder: props.sorting.sortBy === 'createdAt' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : undefined,
-
+    sortOrder: getColumnSortOrder('createdAt', props.sorting.sortBy, props.sorting.sortOrder),
     render: (row) => new Date(row.createdAt).toLocaleDateString(),
   },
   // Conditionally add deleted column for deactivated users view
@@ -101,7 +95,7 @@ const columns: DataTableColumns<User> = [
     title: 'Deleted',
     key: 'deletedAt',
     sorter: true,
-    sortOrder: props.sorting.sortBy === 'deletedAt' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : false,
+    sortOrder: getColumnSortOrder('deletedAt', props.sorting.sortBy, props.sorting.sortOrder),
     render: (row: User) => row.deletedAt ? new Date(row.deletedAt).toLocaleDateString() : '-',
     width: 120,
   }] : []),
@@ -109,9 +103,7 @@ const columns: DataTableColumns<User> = [
     title: 'Updated',
     key: 'updatedAt',
     sorter: true,
-
-    sortOrder: props.sorting.sortBy === 'updatedAt' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : undefined,
-
+    sortOrder: getColumnSortOrder('updatedAt', props.sorting.sortBy, props.sorting.sortOrder),
     render: (row) => row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'Never',
   },
   {
@@ -142,7 +134,7 @@ const columns: DataTableColumns<User> = [
       ) : null,
     ]),
   },
-];
+]);
 
 // Methods - remove pagination handling as it's now external
 function handleSorterChange(sorterInfo: any) {

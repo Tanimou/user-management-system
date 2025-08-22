@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createMockRequest, createMockResponse, createMockUser, createMockJWTPayload } from './utils/mocks';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockRequest, createMockResponse, createMockUser } from './utils/mocks';
 
 // Mock prisma
 vi.mock('../lib/prisma', () => ({
@@ -14,7 +13,7 @@ vi.mock('../lib/prisma', () => ({
     },
     auditLog: {
       create: vi.fn(),
-    }
+    },
   },
   USER_SELECT_FIELDS: {
     id: true,
@@ -25,7 +24,7 @@ vi.mock('../lib/prisma', () => ({
     createdAt: true,
     updatedAt: true,
     avatarUrl: true,
-  }
+  },
 }));
 
 // Mock auth functions
@@ -41,9 +40,9 @@ vi.mock('../lib/auth', async () => {
   };
 });
 
-import handler from '../users/index';
+import { hashPassword, requireAuth, requireRole } from '../lib/auth';
 import prisma from '../lib/prisma';
-import { requireAuth, requireRole, hashPassword } from '../lib/auth';
+import handler from '../users/index';
 
 describe('Users API - GET /api/users', () => {
   beforeEach(() => {
@@ -54,7 +53,7 @@ describe('Users API - GET /api/users', () => {
   it('should return paginated users with default parameters', async () => {
     const mockUsers = [
       createMockUser(1, 'John Doe', 'john@example.com'),
-      createMockUser(2, 'Jane Smith', 'jane@example.com')
+      createMockUser(2, 'Jane Smith', 'jane@example.com'),
     ];
 
     vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers);
@@ -77,17 +76,21 @@ describe('Users API - GET /api/users', () => {
         hasPrev: false,
         startItem: 1,
         endItem: 2,
-      }
+      },
     });
   });
 
   it('should handle search functionality', async () => {
     const mockUsers = [createMockUser(1, 'John Doe', 'john@example.com')];
-    
+
     vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers);
     vi.mocked(prisma.user.count).mockResolvedValue(1);
 
-    const req = createMockRequest('GET', { search: 'john' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      { search: 'john' },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -97,9 +100,9 @@ describe('Users API - GET /api/users', () => {
         where: {
           OR: [
             { name: { contains: 'john', mode: 'insensitive' } },
-            { email: { contains: 'john', mode: 'insensitive' } }
-          ]
-        }
+            { email: { contains: 'john', mode: 'insensitive' } },
+          ],
+        },
       })
     );
   });
@@ -109,7 +112,11 @@ describe('Users API - GET /api/users', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers);
     vi.mocked(prisma.user.count).mockResolvedValue(10); // Set a total that allows page 2
 
-    const req = createMockRequest('GET', { page: '2', size: '5' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      { page: '2', size: '5' },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -126,14 +133,18 @@ describe('Users API - GET /api/users', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([]);
     vi.mocked(prisma.user.count).mockResolvedValue(0);
 
-    const req = createMockRequest('GET', { active: 'true' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      { active: 'true' },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
 
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { isActive: true }
+        where: { isActive: true },
       })
     );
   });
@@ -142,14 +153,18 @@ describe('Users API - GET /api/users', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([]);
     vi.mocked(prisma.user.count).mockResolvedValue(0);
 
-    const req = createMockRequest('GET', { orderBy: 'name', order: 'asc' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      { orderBy: 'name', order: 'asc' },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
 
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        orderBy: { name: 'asc' }
+        orderBy: { name: 'asc' },
       })
     );
   });
@@ -158,14 +173,18 @@ describe('Users API - GET /api/users', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([]);
     vi.mocked(prisma.user.count).mockResolvedValue(0);
 
-    const req = createMockRequest('GET', { role: 'admin' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      { role: 'admin' },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
 
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { roles: { has: 'admin' } }
+        where: { roles: { has: 'admin' } },
       })
     );
   });
@@ -174,14 +193,18 @@ describe('Users API - GET /api/users', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([]);
     vi.mocked(prisma.user.count).mockResolvedValue(0);
 
-    const req = createMockRequest('GET', { orderBy: 'updatedAt', order: 'desc' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      { orderBy: 'updatedAt', order: 'desc' },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
 
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        orderBy: { updatedAt: 'desc' }
+        orderBy: { updatedAt: 'desc' },
       })
     );
   });
@@ -190,14 +213,18 @@ describe('Users API - GET /api/users', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([]);
     vi.mocked(prisma.user.count).mockResolvedValue(0);
 
-    const req = createMockRequest('GET', { role: 'invalid' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      { role: 'invalid' },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
 
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {}
+        where: {},
       })
     );
   });
@@ -206,10 +233,14 @@ describe('Users API - GET /api/users', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([]);
     vi.mocked(prisma.user.count).mockResolvedValue(0);
 
-    const req = createMockRequest('GET', { 
-      createdFrom: '2023-01-01', 
-      createdTo: '2023-12-31' 
-    }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      {
+        createdFrom: '2023-01-01',
+        createdTo: '2023-12-31',
+      },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -219,9 +250,9 @@ describe('Users API - GET /api/users', () => {
         where: {
           createdAt: {
             gte: new Date('2023-01-01'),
-            lte: expect.any(Date) // End of day for 2023-12-31
-          }
-        }
+            lte: expect.any(Date), // End of day for 2023-12-31
+          },
+        },
       })
     );
   });
@@ -230,7 +261,11 @@ describe('Users API - GET /api/users', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([]);
     vi.mocked(prisma.user.count).mockResolvedValue(0);
 
-    const req = createMockRequest('GET', { createdFrom: '2023-01-01' }, { user: { userId: 1, roles: ['user'] } });
+    const req = createMockRequest(
+      'GET',
+      { createdFrom: '2023-01-01' },
+      { user: { userId: 1, roles: ['user'] } }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -239,9 +274,9 @@ describe('Users API - GET /api/users', () => {
       expect.objectContaining({
         where: {
           createdAt: {
-            gte: new Date('2023-01-01')
-          }
-        }
+            gte: new Date('2023-01-01'),
+          },
+        },
       })
     );
   });
@@ -257,19 +292,23 @@ describe('Users API - POST /api/users', () => {
 
   it('should create user when admin', async () => {
     const newUser = createMockUser(1, 'New User', 'new@example.com');
-    
+
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
     vi.mocked(prisma.user.create).mockResolvedValue(newUser);
 
-    const req = createMockRequest('POST', {}, {
-      user: { userId: 1, roles: ['admin'] },
-      body: {
-        name: 'New User',
-        email: 'new@example.com',
-        password: 'Password123!',
-        roles: ['user']
+    const req = createMockRequest(
+      'POST',
+      {},
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: {
+          name: 'New User',
+          email: 'new@example.com',
+          password: 'Password123!',
+          roles: ['user'],
+        },
       }
-    });
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -277,17 +316,21 @@ describe('Users API - POST /api/users', () => {
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
       message: 'User created successfully',
-      data: newUser
+      data: newUser,
     });
   });
 
   it('should reject creation when not admin', async () => {
     vi.mocked(requireRole).mockReturnValue(false);
 
-    const req = createMockRequest('POST', {}, {
-      user: { userId: 1, roles: ['user'] },
-      body: { name: 'Test', email: 'test@example.com', password: 'Password123!' }
-    });
+    const req = createMockRequest(
+      'POST',
+      {},
+      {
+        user: { userId: 1, roles: ['user'] },
+        body: { name: 'Test', email: 'test@example.com', password: 'Password123!' },
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -297,10 +340,14 @@ describe('Users API - POST /api/users', () => {
   });
 
   it('should validate required fields', async () => {
-    const req = createMockRequest('POST', {}, {
-      user: { userId: 1, roles: ['admin'] },
-      body: { name: 'Test' } // Missing email and password
-    });
+    const req = createMockRequest(
+      'POST',
+      {},
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: { name: 'Test' }, // Missing email and password
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -310,14 +357,18 @@ describe('Users API - POST /api/users', () => {
   });
 
   it('should validate password length', async () => {
-    const req = createMockRequest('POST', {}, {
-      user: { userId: 1, roles: ['admin'] },
-      body: {
-        name: 'Test',
-        email: 'test@example.com',
-        password: 'short' // Less than 8 characters
+    const req = createMockRequest(
+      'POST',
+      {},
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: {
+          name: 'Test',
+          email: 'test@example.com',
+          password: 'short', // Less than 8 characters
+        },
       }
-    });
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -325,43 +376,51 @@ describe('Users API - POST /api/users', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       error: 'Password does not meet policy requirements',
-      details: expect.arrayContaining([
-        'Password must be at least 8 characters long'
-      ]),
-      code: 'INVALID_PASSWORD_POLICY'
+      details: expect.arrayContaining(['Password must be at least 8 characters long']),
+      code: 'INVALID_PASSWORD_POLICY',
     });
   });
 
   it('should validate roles array', async () => {
-    const req = createMockRequest('POST', {}, {
-      user: { userId: 1, roles: ['admin'] },
-      body: {
-        name: 'Test',
-        email: 'test@example.com',
-        password: 'Password123!',
-        roles: ['admin'] // Missing required 'user' role
+    const req = createMockRequest(
+      'POST',
+      {},
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: {
+          name: 'Test',
+          email: 'test@example.com',
+          password: 'Password123!',
+          roles: ['admin'], // Missing required 'user' role
+        },
       }
-    });
+    );
     const res = createMockResponse();
 
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Roles must be an array containing valid roles and at least "user"' });
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Roles must be an array containing valid roles and at least "user"',
+    });
   });
 
   it('should handle duplicate email', async () => {
     const existingUser = createMockUser(1, 'Existing', 'existing@example.com', true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(existingUser);
 
-    const req = createMockRequest('POST', {}, {
-      user: { userId: 1, roles: ['admin'] },
-      body: {
-        name: 'New User',
-        email: 'existing@example.com',
-        password: 'Password123!'
+    const req = createMockRequest(
+      'POST',
+      {},
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: {
+          name: 'New User',
+          email: 'existing@example.com',
+          password: 'Password123!',
+        },
       }
-    });
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -373,18 +432,22 @@ describe('Users API - POST /api/users', () => {
   it('should reactivate soft-deleted user', async () => {
     const softDeletedUser = createMockUser(1, 'Deleted', 'deleted@example.com', false);
     const reactivatedUser = createMockUser(1, 'Reactivated', 'deleted@example.com', true);
-    
+
     vi.mocked(prisma.user.findUnique).mockResolvedValue(softDeletedUser);
     vi.mocked(prisma.user.update).mockResolvedValue(reactivatedUser);
 
-    const req = createMockRequest('POST', {}, {
-      user: { userId: 1, roles: ['admin'] },
-      body: {
-        name: 'Reactivated',
-        email: 'deleted@example.com',
-        password: 'Password123!'
+    const req = createMockRequest(
+      'POST',
+      {},
+      {
+        user: { userId: 1, roles: ['admin'] },
+        body: {
+          name: 'Reactivated',
+          email: 'deleted@example.com',
+          password: 'Password123!',
+        },
       }
-    });
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -394,9 +457,9 @@ describe('Users API - POST /api/users', () => {
       data: expect.objectContaining({
         name: 'Reactivated',
         email: 'deleted@example.com',
-        isActive: true
+        isActive: true,
       }),
-      select: expect.any(Object)
+      select: expect.any(Object),
     });
     expect(res.status).toHaveBeenCalledWith(201);
   });

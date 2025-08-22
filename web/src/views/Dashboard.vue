@@ -22,20 +22,16 @@
         <div class="page-header">
           <h2>Users</h2>
           <div class="header-actions">
-            <n-tabs 
-              v-model:value="activeTab" 
-              type="segment" 
+            <n-tabs
+              v-model:value="activeTab"
+              type="segment"
               @update:value="handleTabChange"
               style="margin-right: 16px"
             >
               <n-tab-pane name="active" tab="Active Users" />
               <n-tab-pane name="deactivated" tab="Deactivated Users" v-if="authStore.isAdmin" />
             </n-tabs>
-            <n-button
-              v-if="authStore.isAdmin"
-              type="primary"
-              @click="showCreateModal = true"
-            >
+            <n-button v-if="authStore.isAdmin" type="primary" @click="showCreateModal = true">
               <template #icon>
                 <n-icon><AddIcon /></n-icon>
               </template>
@@ -48,7 +44,6 @@
 
         <n-card class="filters-card" v-if="activeTab === 'active'">
           <n-space>
-
             <n-input
               v-model:value="filters.search"
               placeholder="Search by name or email..."
@@ -93,9 +88,7 @@
               style="width: 150px"
             />
 
-            <n-button @click="clearFilters" secondary>
-              Clear Filters
-            </n-button>
+            <n-button @click="clearFilters" secondary> Clear Filters </n-button>
 
             <n-button @click="loadUsers">
               <template #icon>
@@ -104,10 +97,10 @@
               Refresh
             </n-button>
           </n-space>
-          
+
           <!-- Active Filters Indicator -->
           <div v-if="activeFiltersCount > 0" class="active-filters-indicator">
-            <n-text depth="3" style="font-size: 12px;">
+            <n-text depth="3" style="font-size: 12px">
               {{ activeFiltersCount }} filter{{ activeFiltersCount > 1 ? 's' : '' }} active
             </n-text>
           </div>
@@ -140,13 +133,8 @@
         <user-table
           :users="users"
           :loading="loading"
-
-          :pagination="pagination"
           :sorting="sorting"
           :show-deleted-column="activeTab === 'deactivated'"
-          @update:page="handlePageChange"
-          @update:page-size="handlePageSizeChange"
-
           @update:sorter="handleSorterChange"
           @edit="handleEdit"
           @delete="handleDelete"
@@ -168,26 +156,15 @@
 
         <!-- Create/Edit User Modal -->
         <n-modal v-model:show="showCreateModal" preset="dialog" title="Create User">
-          <user-form
-            :user="editingUser"
-            @save="handleSaveUser"
-            @cancel="handleCancelUser"
-          />
+          <user-form :user="editingUser" @save="handleSaveUser" @cancel="handleCancelUser" />
         </n-modal>
 
         <n-modal v-model:show="showEditModal" preset="dialog" title="Edit User">
-          <user-form
-            :user="editingUser"
-            @save="handleSaveUser"
-            @cancel="handleCancelUser"
-          />
+          <user-form :user="editingUser" @save="handleSaveUser" @cancel="handleCancelUser" />
         </n-modal>
 
         <!-- User Profile Modal -->
-        <user-profile 
-          v-model:show="showProfileModal"
-          @updated="handleProfileUpdated"
-        />
+        <user-profile v-model:show="showProfileModal" @updated="handleProfileUpdated" />
       </n-layout-content>
     </n-layout>
   </div>
@@ -197,11 +174,11 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
-import { 
+import {
   PersonOutline as PersonIcon,
   Add as AddIcon,
   Search as SearchIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
 } from '@vicons/ionicons5';
 import { useAuthStore, type User } from '@/stores/auth';
 import UserForm from '@/components/UserForm.vue';
@@ -217,10 +194,8 @@ const route = useRoute();
 const message = useMessage();
 const dialog = useDialog();
 const authStore = useAuthStore();
-const sorting = reactive({
-  sortBy: 'createdAt',
-  sortOrder: 'desc'
-});
+const paginationState = usePaginationState();
+
 // Computed
 const activeFiltersCount = computed(() => {
   let count = 0;
@@ -246,7 +221,7 @@ const total = ref(0);
 const totalPages = ref(1);
 const startItem = ref(0);
 const endItem = ref(0);
-const paginationState = usePaginationState();
+
 // Legacy filters - sync with pagination state
 const filters = reactive({
   search: '',
@@ -256,17 +231,11 @@ const filters = reactive({
   createdTo: null as string | null,
 });
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0,
-  showSizePicker: true,
-  pageSizes: [10, 20, 50],
-});
-
-// Remove old pagination/sorting state as it's now handled by paginationState
-// const pagination = reactive({...});  // REMOVED
-// const sorting = reactive({...});     // REMOVED
+// Computed sorting object for UserTable props
+const sorting = computed(() => ({
+  sortBy: paginationState.sortBy.value,
+  sortOrder: paginationState.sortOrder.value,
+}));
 
 // Options
 const statusOptions = [
@@ -300,9 +269,9 @@ async function loadUsers() {
   try {
     const params: any = {
       page: paginationState.page.value,
-size: paginationState.size.value,
-orderBy: paginationState.sortBy.value,
-order: paginationState.sortOrder.value,
+      size: paginationState.size.value,
+      orderBy: paginationState.sortBy.value,
+      order: paginationState.sortOrder.value,
     };
 
     if (filters.search) {
@@ -310,15 +279,14 @@ order: paginationState.sortOrder.value,
     }
 
     let endpoint = '/users';
-    
+
     if (activeTab.value === 'deactivated') {
       endpoint = '/users/deactivated';
       // For deactivated users, default sort by deletedAt desc
-      if (!params.sortBy || params.sortBy === 'createdAt') {
-        params.sortBy = 'deletedAt';
-        params.sortOrder = 'desc';
-        sorting.sortBy = 'deletedAt';
-        sorting.sortOrder = 'desc';
+      if (!params.orderBy || params.orderBy === 'createdAt') {
+        params.orderBy = 'deletedAt';
+        params.order = 'desc';
+        paginationState.setSorting('deletedAt', 'desc');
       }
     } else {
       // For active users, apply active filter if set
@@ -326,7 +294,6 @@ order: paginationState.sortOrder.value,
         params.active = filters.active;
       }
     }
-
 
     const response = await apiClient.get(endpoint, { params });
 
@@ -354,11 +321,11 @@ function handlePageSizeChange(pageSize: number) {
 
 function handleSorterChange(sorterInfo: any) {
   if (!sorterInfo) return;
-  
+
   const { columnKey, order } = sorterInfo;
   const sortBy = columnKey;
   const sortOrder = fromNaiveSortOrder(order);
-  
+
   paginationState.setSorting(sortBy, sortOrder);
   loadUsers();
 }
@@ -409,17 +376,15 @@ function handleTabChange(value: 'active' | 'deactivated') {
   // Reset filters when switching tabs
   filters.search = '';
   filters.active = undefined;
-  pagination.page = 1;
-  
+  paginationState.setPage(1);
+
   // Reset sorting for deactivated tab
   if (value === 'deactivated') {
-    sorting.sortBy = 'deletedAt';
-    sorting.sortOrder = 'desc';
+    paginationState.setSorting('deletedAt', 'desc');
   } else {
-    sorting.sortBy = 'createdAt';
-    sorting.sortOrder = 'desc';
+    paginationState.setSorting('createdAt', 'desc');
   }
-  
+
   loadUsers();
 }
 
@@ -434,7 +399,7 @@ async function handleSaveUser(userData: any) {
       await apiClient.post('/users', userData);
       message.success('User created successfully');
     }
-    
+
     showCreateModal.value = false;
     showEditModal.value = false;
     editingUser.value = null;
@@ -467,30 +432,30 @@ function handleProfileUpdated() {
 // Initialize filters from URL parameters
 function initializeFromURL() {
   const query = route.query;
-  
+
   if (query.search) {
     filters.search = query.search as string;
   }
-  
+
   if (query.active !== undefined) {
     filters.active = query.active === 'true' ? true : query.active === 'false' ? false : undefined;
   }
-  
+
   if (query.role) {
     filters.role = query.role as string;
   }
-  
-if (query.orderBy) {
-  paginationState.setSorting(query.orderBy as string, (query.order as 'asc' | 'desc') || 'asc');
-}  
 
-if (query.page) {
-  paginationState.setPage(parseInt(query.page as string) || 1);
-}
+  if (query.orderBy) {
+    paginationState.setSorting(query.orderBy as string, (query.order as 'asc' | 'desc') || 'asc');
+  }
 
-if (query.size) {
-  paginationState.setSize(parseInt(query.size as string) || 10);
-}
+  if (query.page) {
+    paginationState.setPage(parseInt(query.page as string) || 1);
+  }
+
+  if (query.size) {
+    paginationState.setSize(parseInt(query.size as string) || 10);
+  }
 
   // Handle date filters (from timestamp to Date object)
   if (query.createdFrom) {
@@ -514,25 +479,37 @@ function clearFilters() {
 }
 
 // Watch filters
-watch(() => filters.active, () => {
-  paginationState.setPage(1);
-  loadUsers();
-});
+watch(
+  () => filters.active,
+  () => {
+    paginationState.setPage(1);
+    loadUsers();
+  }
+);
 
-watch(() => filters.role, () => {
-  paginationState.setPage(1);
-  loadUsers();
-});
+watch(
+  () => filters.role,
+  () => {
+    paginationState.setPage(1);
+    loadUsers();
+  }
+);
 
-watch(() => filters.createdFrom, () => {
-  paginationState.setPage(1);
-  loadUsers();
-});
+watch(
+  () => filters.createdFrom,
+  () => {
+    paginationState.setPage(1);
+    loadUsers();
+  }
+);
 
-watch(() => filters.createdTo, () => {
-  paginationState.setPage(1);
-  loadUsers();
-});
+watch(
+  () => filters.createdTo,
+  () => {
+    paginationState.setPage(1);
+    loadUsers();
+  }
+);
 
 // Initialize
 onMounted(() => {
@@ -616,12 +593,12 @@ onMounted(() => {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filters-card :deep(.n-space .n-space-item) {
     margin-right: 0 !important;
     margin-bottom: 8px;
   }
-  
+
   .filters-card :deep(.n-input),
   .filters-card :deep(.n-select),
   .filters-card :deep(.n-date-picker) {
@@ -632,36 +609,36 @@ onMounted(() => {
     padding: 0 16px;
     height: 56px;
   }
-  
+
   .header-content h1 {
     font-size: 18px;
   }
-  
+
   .content {
     padding: 16px;
   }
-  
+
   .page-header {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
     margin-bottom: 16px;
   }
-  
+
   .page-header h2 {
     font-size: 20px;
   }
-  
+
   .header-actions {
     width: 100%;
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .filters-card {
     margin-bottom: 16px;
   }
-  
+
   .filters-card :deep(.n-card__content) {
     padding: 16px;
   }
@@ -671,15 +648,15 @@ onMounted(() => {
   .header-content h1 {
     font-size: 16px;
   }
-  
+
   .content {
     padding: 12px;
   }
-  
+
   .page-header h2 {
     font-size: 18px;
   }
-  
+
   .filters-card :deep(.n-card__content) {
     padding: 12px;
   }

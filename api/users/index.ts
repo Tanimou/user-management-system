@@ -1,4 +1,5 @@
 import type { VercelResponse } from '@vercel/node';
+import { logUserCreation } from '../lib/audit-logger.js';
 import {
   hashPassword,
   requireAuth,
@@ -7,11 +8,10 @@ import {
   setSecurityHeaders,
   type AuthenticatedRequest,
 } from '../lib/auth.js';
-import prisma, { USER_SELECT_FIELDS } from '../lib/prisma.js';
-import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
+import prisma from '../lib/prisma.js';
 import { validateRoles } from '../lib/role-validation.js';
-import { logUserCreation } from '../lib/audit-logger.js';
 import { getValidatedSorting } from '../lib/sorting.js';
+import { validateEmail, validateName, validatePasswordPolicy } from '../lib/validation.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
