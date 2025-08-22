@@ -11,6 +11,7 @@
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
     "db:seed": "tsx scripts/seed.ts",
+    "db:performance": "tsx scripts/performance-test.ts",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "echo 'ESLint configuration pending - linting will be enabled in next iteration'",
@@ -48,5 +49,8 @@
     "ts-api-utils": "^2.1.0",
     "tsx": "^4.7.0",
     "vitest": "^3.2.4"
+  },
+  "prisma": {
+    "seed": "tsx scripts/seed.ts"
   }
 }
