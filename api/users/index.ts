@@ -9,6 +9,8 @@ import {
 } from '../lib/auth.js';
 import prisma from '../lib/prisma.js';
 import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
+import { validateRoles } from '../lib/role-validation.js';
+import { logUserCreation } from '../lib/audit-logger.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -40,6 +42,9 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
       size = '10',
       search = '',
       active,
+      role,
+      createdFrom,
+      createdTo,
       orderBy = 'createdAt',
       order = 'desc',
     } = req.query;
@@ -76,7 +81,7 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     const skip = (pageNum - 1) * pageSize;
 
     // Handle sorting
-    const validOrderBy = ['name', 'email', 'createdAt'];
+    const validOrderBy = ['name', 'email', 'createdAt', 'updatedAt'];
     const validOrder = ['asc', 'desc'];
 
     const sortField = validOrderBy.includes(orderBy as string) ? (orderBy as string) : 'createdAt';
@@ -167,8 +172,9 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
       });
     }
 
-    if (!Array.isArray(roles) || !roles.includes('user')) {
-      return res.status(400).json({ error: 'Roles must be an array containing at least "user"' });
+    // Validate roles using utility function
+    if (!validateRoles(roles)) {
+      return res.status(400).json({ error: 'Roles must be an array containing valid roles and at least "user"' });
     }
 
     // Normalize email
@@ -229,6 +235,9 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
         },
       });
     }
+
+    // Log user creation for audit trail
+    await logUserCreation(req, user.id, { name: user.name, email: user.email, roles: user.roles });
 
     return res.status(201).json({
       message: 'User created successfully',

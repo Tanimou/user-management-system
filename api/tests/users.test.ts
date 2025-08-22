@@ -140,6 +140,98 @@ describe('Users API - GET /api/users', () => {
       })
     );
   });
+
+  it('should handle role filter', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+    const req = createMockRequest('GET', { role: 'admin' }, { user: { userId: 1, roles: ['user'] } });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { roles: { has: 'admin' } }
+      })
+    );
+  });
+
+  it('should handle updatedAt sorting', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+    const req = createMockRequest('GET', { orderBy: 'updatedAt', order: 'desc' }, { user: { userId: 1, roles: ['user'] } });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: { updatedAt: 'desc' }
+      })
+    );
+  });
+
+  it('should ignore invalid role filter', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+    const req = createMockRequest('GET', { role: 'invalid' }, { user: { userId: 1, roles: ['user'] } });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {}
+      })
+    );
+  });
+
+  it('should handle date range filtering', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+    const req = createMockRequest('GET', { 
+      createdFrom: '2023-01-01', 
+      createdTo: '2023-12-31' 
+    }, { user: { userId: 1, roles: ['user'] } });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          createdAt: {
+            gte: new Date('2023-01-01'),
+            lte: expect.any(Date) // End of day for 2023-12-31
+          }
+        }
+      })
+    );
+  });
+
+  it('should handle partial date range filtering', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+    const req = createMockRequest('GET', { createdFrom: '2023-01-01' }, { user: { userId: 1, roles: ['user'] } });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          createdAt: {
+            gte: new Date('2023-01-01')
+          }
+        }
+      })
+    );
+  });
 });
 
 describe('Users API - POST /api/users', () => {
@@ -242,7 +334,7 @@ describe('Users API - POST /api/users', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Roles must be an array containing at least "user"' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Roles must be an array containing valid roles and at least "user"' });
   });
 
   it('should handle duplicate email', async () => {

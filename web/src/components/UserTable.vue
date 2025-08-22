@@ -80,6 +80,13 @@ const columns: DataTableColumns<User> = [
     render: (row) => new Date(row.createdAt).toLocaleDateString(),
   },
   {
+    title: 'Updated',
+    key: 'updatedAt',
+    sorter: true,
+    sortOrder: props.sorting.sortBy === 'updatedAt' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : false,
+    render: (row) => row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'Never',
+  },
+  {
     title: 'Actions',
     key: 'actions',
     width: 120,
