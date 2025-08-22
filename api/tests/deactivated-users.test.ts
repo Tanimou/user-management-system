@@ -85,7 +85,6 @@ vi.mock('../lib/prisma.js', () => ({
 
 import jwt from 'jsonwebtoken';
 import { verifyToken } from '../lib/middleware/enhanced-auth';
-import { getUsersSchema } from '../lib/schemas/user';
 
 describe('Deactivated Users API - GET /api/users/deactivated', () => {
   beforeEach(() => {
