@@ -111,7 +111,7 @@ jobs:
           BUNDLE_SIZE=$(du -sh web/dist/assets/*.js | cut -f1)
           echo "Bundle size: $BUNDLE_SIZE"
           # Add warning if bundle is too large (>2MB)
-          BUNDLE_BYTES=$(du -b web/dist/assets/*.js | cut -f1)
+          BUNDLE_BYTES=$(du -bc web/dist/assets/*.js | tail -n1 | cut -f1)
           if [ $BUNDLE_BYTES -gt 2097152 ]; then
             echo "::warning::Bundle size exceeds 2MB ($BUNDLE_SIZE)"
           fi
