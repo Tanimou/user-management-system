@@ -67,7 +67,7 @@ apiClient.interceptors.response.use(
           withCredentials: true
         });
 
-        const { accessToken } = response.data;
+        const { token: accessToken } = response.data; // Updated to match API spec
         localStorage.setItem('accessToken', accessToken);
         
         processQueue(null, accessToken);
