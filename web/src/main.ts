@@ -22,6 +22,18 @@ const routes = [
     component: Dashboard,
     meta: { requiresAuth: true }
   },
+  { 
+    path: '/users', 
+    name: 'Users', 
+    component: Dashboard,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  { 
+    path: '/profile', 
+    name: 'Profile', 
+    component: Dashboard,
+    meta: { requiresAuth: true }
+  },
   // Redirect /dashboard to /
   { 
     path: '/dashboard', 
@@ -51,6 +63,9 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login');
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    next('/');
+  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    // Redirect non-admin users trying to access admin routes
     next('/');
   } else {
     next();
