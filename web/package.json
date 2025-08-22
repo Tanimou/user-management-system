@@ -15,7 +15,7 @@
     "format:check": "prettier --check \"**/*.{vue,ts,js,json,css,md}\""
   },
   "dependencies": {
-    "@vicons/ionicons5": "^0.12.0",
+    "@vicons/ionicons5": "^0.13.0",
     "@vueuse/core": "^10.7.0",
     "axios": "^1.6.2",
     "naive-ui": "^2.35.0",
