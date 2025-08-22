@@ -21,20 +21,31 @@
         <!-- Page Header -->
         <div class="page-header">
           <h2>Users</h2>
-          <n-button
-            v-if="authStore.isAdmin"
-            type="primary"
-            @click="showCreateModal = true"
-          >
-            <template #icon>
-              <n-icon><AddIcon /></n-icon>
-            </template>
-            Create User
-          </n-button>
+          <div class="header-actions">
+            <n-tabs 
+              v-model:value="activeTab" 
+              type="segment" 
+              @update:value="handleTabChange"
+              style="margin-right: 16px"
+            >
+              <n-tab-pane name="active" tab="Active Users" />
+              <n-tab-pane name="deactivated" tab="Deactivated Users" v-if="authStore.isAdmin" />
+            </n-tabs>
+            <n-button
+              v-if="authStore.isAdmin"
+              type="primary"
+              @click="showCreateModal = true"
+            >
+              <template #icon>
+                <n-icon><AddIcon /></n-icon>
+              </template>
+              Create User
+            </n-button>
+          </div>
         </div>
 
         <!-- Filters -->
-        <n-card class="filters-card">
+        <n-card class="filters-card" v-if="activeTab === 'active'">
           <n-space>
             <n-input
               v-model:value="filters.search"
@@ -64,17 +75,42 @@
           </n-space>
         </n-card>
 
+        <!-- Deactivated Users Filters -->
+        <n-card class="filters-card" v-else-if="activeTab === 'deactivated'">
+          <n-space>
+            <n-input
+              v-model:value="filters.search"
+              placeholder="Search deactivated users..."
+              clearable
+              @input="debouncedSearch"
+            >
+              <template #prefix>
+                <n-icon><SearchIcon /></n-icon>
+              </template>
+            </n-input>
+
+            <n-button @click="loadUsers">
+              <template #icon>
+                <n-icon><RefreshIcon /></n-icon>
+              </template>
+              Refresh
+            </n-button>
+          </n-space>
+        </n-card>
+
         <!-- Users Table -->
         <user-table
           :users="users"
           :loading="loading"
           :pagination="pagination"
           :sorting="sorting"
+          :show-deleted-column="activeTab === 'deactivated'"
           @update:page="handlePageChange"
           @update:page-size="handlePageSizeChange"
           @update:sorter="handleSorterChange"
           @edit="handleEdit"
           @delete="handleDelete"
+          @restore="handleRestore"
         />
 
         <!-- Create/Edit User Modal -->
@@ -132,6 +168,7 @@ const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showProfileModal = ref(false);
 const editingUser = ref<User | null>(null);
+const activeTab = ref<'active' | 'deactivated'>('active');
 
 const filters = reactive({
   search: '',
@@ -188,11 +225,25 @@ async function loadUsers() {
       params.search = filters.search;
     }
 
-    if (filters.active !== undefined) {
-      params.active = filters.active;
+    let endpoint = '/users';
+    
+    if (activeTab.value === 'deactivated') {
+      endpoint = '/users/deactivated';
+      // For deactivated users, default sort by deletedAt desc
+      if (!params.sortBy || params.sortBy === 'createdAt') {
+        params.sortBy = 'deletedAt';
+        params.sortOrder = 'desc';
+        sorting.sortBy = 'deletedAt';
+        sorting.sortOrder = 'desc';
+      }
+    } else {
+      // For active users, apply active filter if set
+      if (filters.active !== undefined) {
+        params.active = filters.active;
+      }
     }
 
-    const response = await apiClient.get('/users', { params });
+    const response = await apiClient.get(endpoint, { params });
     users.value = response.data.data;
     pagination.total = response.data.pagination.total;
   } catch (error: any) {
@@ -246,6 +297,43 @@ function handleDelete(user: User) {
       }
     },
   });
+}
+
+function handleRestore(user: User) {
+  dialog.info({
+    title: 'Confirm Restore',
+    content: `Are you sure you want to restore user "${user.name}"?`,
+    positiveText: 'Restore',
+    negativeText: 'Cancel',
+    onPositiveClick: async () => {
+      try {
+        await apiClient.post(`/users/${user.id}`, { action: 'restore' });
+        message.success('User restored successfully');
+        loadUsers();
+      } catch (error: any) {
+        message.error(error.response?.data?.error || 'Failed to restore user');
+      }
+    },
+  });
+}
+
+function handleTabChange(value: 'active' | 'deactivated') {
+  activeTab.value = value;
+  // Reset filters when switching tabs
+  filters.search = '';
+  filters.active = undefined;
+  pagination.page = 1;
+  
+  // Reset sorting for deactivated tab
+  if (value === 'deactivated') {
+    sorting.sortBy = 'deletedAt';
+    sorting.sortOrder = 'desc';
+  } else {
+    sorting.sortBy = 'createdAt';
+    sorting.sortOrder = 'desc';
+  }
+  
+  loadUsers();
 }
 
 async function handleSaveUser(userData: any) {
@@ -355,6 +443,12 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .filters-card {
   margin-bottom: 24px;
 }
@@ -383,6 +477,12 @@ onMounted(() => {
   
   .page-header h2 {
     font-size: 20px;
+  }
+  
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 12px;
   }
   
   .filters-card {
