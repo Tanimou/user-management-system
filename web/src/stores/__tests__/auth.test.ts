@@ -22,6 +22,8 @@ describe('Auth Store', () => {
     setActivePinia(createPinia());
     authStore = useAuthStore();
     vi.clearAllMocks();
+    // Clear any localStorage mocks to prevent state leakage between tests
+    localStorageMock.getItem.mockReturnValue(null);
   });
 
   describe('Initial State', () => {

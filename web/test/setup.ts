@@ -9,6 +9,19 @@ Object.defineProperty(process, 'env', {
   }
 });
 
+// Mock localStorage and sessionStorage
+const createStorageMock = () => ({
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  key: vi.fn(),
+  length: 0
+});
+
+Object.defineProperty(window, 'localStorage', { value: createStorageMock() });
+Object.defineProperty(window, 'sessionStorage', { value: createStorageMock() });
+
 // Global test configuration
 vi.mock('naive-ui', () => ({
   useMessage: () => ({

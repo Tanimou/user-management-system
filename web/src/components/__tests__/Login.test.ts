@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, VueWrapper } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
-import Login from '../../../views/Login.vue';
-import { useAuthStore } from '../../../stores/auth';
+import Login from '../../pages/auth/LoginPage.vue';
+import { useAuthStore } from '../../stores/auth';
 
 // Mock the router
 const mockRouter = {
@@ -14,6 +14,13 @@ const mockRouter = {
     }
   }
 };
+
+vi.mock('vue-router', () => ({
+  useRouter: () => mockRouter,
+  useRoute: () => ({
+    query: {}
+  })
+}));
 
 // Mock naive-ui components
 vi.mock('naive-ui', () => ({
@@ -33,9 +40,9 @@ vi.mock('naive-ui', () => ({
   },
   NInput: {
     name: 'NInput',
-    template: '<input :value="value" @input="$emit(\'update:value\', $event.target.value)" :type="type" :placeholder="placeholder" :disabled="disabled" />',
-    props: ['value', 'type', 'placeholder', 'disabled'],
-    emits: ['update:value']
+    template: '<input :value="value" @input="$emit(\'update:value\', $event.target.value)" :type="type || \'text\'" :placeholder="placeholder" :disabled="disabled" class="n-input" />',
+    props: ['value', 'type', 'placeholder', 'disabled', 'showPasswordOn', 'autocomplete', 'ariaLabel'],
+    emits: ['update:value', 'input', 'keydown']
   },
   NButton: {
     name: 'NButton',
