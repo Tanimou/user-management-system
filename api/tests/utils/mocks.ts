@@ -41,10 +41,12 @@ export function createMockUser(
     id,
     name,
     email,
+    password: 'hashed-password', // Add password field for Prisma compatibility
     roles,
     isActive,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null, // Add deletedAt field for soft delete compatibility
     avatarUrl: avatarUrl || null,
   };
 }

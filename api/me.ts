@@ -1,11 +1,11 @@
 import type { VercelResponse } from '@vercel/node';
 import { hashPassword } from './lib/auth.js';
-import { 
-  withCORS, 
-  withErrorHandling, 
-  withAuth, 
+import {
   validateBody,
-  type AuthenticatedRequest 
+  withAuth,
+  withCORS,
+  withErrorHandling,
+  type AuthenticatedRequest,
 } from './lib/middleware/index.js';
 import prisma, { USER_SELECT_FIELDS } from './lib/prisma.js';
 import { updateUserSchema } from './lib/schemas/user.js';
@@ -13,23 +13,21 @@ import { updateUserSchema } from './lib/schemas/user.js';
 // GET /api/me - Get current user profile
 const getProfileHandler = withCORS(
   withErrorHandling(
-    withAuth(
-      async (req: AuthenticatedRequest, res: VercelResponse) => {
-        await handleGetProfile(req, res);
-      }
-    )
+    withAuth(async (req: AuthenticatedRequest, res: VercelResponse) => {
+      await handleGetProfile(req, res);
+    })
   )
 );
 
-// PUT /api/me - Update current user profile  
+// PUT /api/me - Update current user profile
 const updateProfileHandler = withCORS(
   withErrorHandling(
     withAuth(
-      validateBody(updateUserSchema.fork(['email', 'roles', 'isActive'], (schema) => schema.forbidden()))(
-        async (req: AuthenticatedRequest, res: VercelResponse) => {
-          await handleUpdateProfile(req, res);
-        }
-      )
+      validateBody(
+        updateUserSchema.fork(['email', 'roles', 'isActive'], schema => schema.forbidden())
+      )(async (req: AuthenticatedRequest, res: VercelResponse) => {
+        await handleUpdateProfile(req, res);
+      })
     )
   )
 );
@@ -76,7 +74,8 @@ async function handleUpdateProfile(req: AuthenticatedRequest, res: VercelRespons
   }
 
   // If no valid updates provided
-  if (Object.keys(updateData).length === 1) { // Only updatedAt
+  if (Object.keys(updateData).length === 1) {
+    // Only updatedAt
     return res.status(400).json({ error: 'No valid fields to update' });
   }
 

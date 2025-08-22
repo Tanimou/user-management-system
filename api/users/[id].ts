@@ -1,18 +1,18 @@
 import type { VercelResponse } from '@vercel/node';
+import { logRoleChange, logStatusChange, logUserDeletion } from '../lib/audit-logger.js';
 import { hashPassword } from '../lib/auth.js';
-import { 
-  withCORS, 
-  withErrorHandling, 
-  withAuth, 
-  withSelfOrAdmin,
-  withAdminRole,
+import {
   preventSelfDemotion,
   validateBody,
   validateQuery,
-  type AuthenticatedRequest 
+  withAdminRole,
+  withAuth,
+  withCORS,
+  withErrorHandling,
+  withSelfOrAdmin,
+  type AuthenticatedRequest,
 } from '../lib/middleware/index.js';
-import prisma, { USER_SELECT_FIELDS } from '../lib/prisma.js';
-import { logRoleChange, logStatusChange, logUserDeletion } from '../lib/audit-logger.js';
+import prisma from '../lib/prisma.js';
 import { updateUserSchema, userIdSchema } from '../lib/schemas/user.js';
 
 // GET /api/users/[id] - Get user by ID (self or admin)
@@ -109,6 +109,7 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
     await restoreUserHandler(req, res);
   } else {
     res.status(405).json({ error: 'Method not allowed' });
+  }
 }
 
 async function handleGetUser(req: AuthenticatedRequest, res: VercelResponse, userId: number) {
