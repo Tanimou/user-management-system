@@ -9,6 +9,8 @@ import {
 } from '../lib/auth.js';
 import prisma from '../lib/prisma.js';
 import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
+import { validateRoles, preventSelfDemotion, preventSelfDeactivation } from '../lib/role-validation.js';
+import { logRoleChange, logStatusChange, logUserDeletion } from '../lib/audit-logger.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -141,13 +143,16 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
         return res.status(403).json({ error: 'Only admins can update user roles' });
       }
 
-      if (!Array.isArray(roles) || !roles.includes('user')) {
-        return res.status(400).json({ error: 'Roles must be an array containing at least "user"' });
+      // Validate roles using utility function
+      if (!validateRoles(roles)) {
+        return res.status(400).json({ error: 'Roles must be an array containing valid roles and at least "user"' });
       }
 
-      // Prevent self-demotion guard
-      if (isSelf && existingUser.roles.includes('admin') && !roles.includes('admin')) {
-        return res.status(400).json({ error: 'Cannot remove admin role from yourself' });
+      try {
+        // Prevent self-demotion using utility function
+        preventSelfDemotion(req.user, existingUser, roles);
+      } catch (error) {
+        return res.status(400).json({ error: (error as Error).message });
       }
 
       updateData.roles = roles;
@@ -159,9 +164,11 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
         return res.status(403).json({ error: 'Only admins can activate/deactivate users' });
       }
 
-      // Prevent self-deactivation guard
-      if (isSelf && !isActive) {
-        return res.status(400).json({ error: 'Cannot deactivate yourself' });
+      try {
+        // Prevent self-deactivation using utility function
+        preventSelfDeactivation(req.user, existingUser, isActive);
+      } catch (error) {
+        return res.status(400).json({ error: (error as Error).message });
       }
 
       updateData.isActive = Boolean(isActive);
@@ -183,6 +190,16 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
         avatarUrl: true,
       },
     });
+
+    // Log role changes for audit trail
+    if (roles !== undefined && JSON.stringify(existingUser.roles) !== JSON.stringify(roles)) {
+      await logRoleChange(req, userId, existingUser.roles, roles);
+    }
+
+    // Log status changes for audit trail
+    if (isActive !== undefined && existingUser.isActive !== isActive) {
+      await logStatusChange(req, userId, existingUser.isActive, isActive);
+    }
 
     return res.status(200).json({
       message: 'User updated successfully',
@@ -243,6 +260,9 @@ async function handleDeleteUser(req: AuthenticatedRequest, res: VercelResponse, 
         avatarUrl: true,
       },
     });
+
+    // Log user deletion for audit trail
+    await logUserDeletion(req, userId, existingUser.email);
 
     return res.status(200).json({
       message: 'User deleted successfully',

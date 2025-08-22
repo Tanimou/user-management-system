@@ -4,10 +4,8 @@
       :columns="columns"
       :data="users"
       :loading="loading"
-      :pagination="paginationReactive"
+      :pagination="false"
       :bordered="false"
-      @update:page="handlePageChange"
-      @update:page-size="handlePageSizeChange"
       @update:sorter="handleSorterChange"
     />
   </n-card>
@@ -26,13 +24,6 @@ import { useAuthStore, type User } from '@/stores/auth';
 interface Props {
   users: User[];
   loading: boolean;
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    showSizePicker: boolean;
-    pageSizes: number[];
-  };
   sorting: {
     sortBy: string;
     sortOrder: 'asc' | 'desc';
@@ -41,8 +32,6 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'update:page', page: number): void;
-  (e: 'update:page-size', pageSize: number): void;
   (e: 'update:sorter', sorterInfo: any): void;
   (e: 'edit', user: User): void;
   (e: 'delete', user: User): void;
@@ -54,12 +43,8 @@ const emit = defineEmits<Emits>();
 
 const authStore = useAuthStore();
 
-// Computed reactive pagination
-const paginationReactive = computed(() => ({
-  ...props.pagination,
-  onChange: (page: number) => handlePageChange(page),
-  onUpdatePageSize: (pageSize: number) => handlePageSizeChange(pageSize),
-}));
+// Remove pagination reactive computed since pagination is now handled separately
+// const paginationReactive = computed(() => ({...})); // REMOVED
 
 // Table columns
 const columns: DataTableColumns<User> = [
@@ -114,6 +99,13 @@ const columns: DataTableColumns<User> = [
     width: 120,
   }] : []),
   {
+    title: 'Updated',
+    key: 'updatedAt',
+    sorter: true,
+    sortOrder: props.sorting.sortBy === 'updatedAt' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : false,
+    render: (row) => row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'Never',
+  },
+  {
     title: 'Actions',
     key: 'actions',
     width: 150,
@@ -143,15 +135,7 @@ const columns: DataTableColumns<User> = [
   },
 ];
 
-// Methods
-function handlePageChange(page: number) {
-  emit('update:page', page);
-}
-
-function handlePageSizeChange(pageSize: number) {
-  emit('update:page-size', pageSize);
-}
-
+// Methods - remove pagination handling as it's now external
 function handleSorterChange(sorterInfo: any) {
   emit('update:sorter', sorterInfo);
 }

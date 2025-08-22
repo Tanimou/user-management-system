@@ -9,6 +9,8 @@ import {
 } from '../lib/auth.js';
 import prisma from '../lib/prisma.js';
 import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
+import { validateRoles } from '../lib/role-validation.js';
+import { logUserCreation } from '../lib/audit-logger.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -40,18 +42,20 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
       size = '10',
       search = '',
       active,
+      role,
+      createdFrom,
+      createdTo,
       orderBy = 'createdAt',
       order = 'desc',
     } = req.query;
 
     // Parse and validate pagination parameters
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    let pageNum = Math.max(1, parseInt(page as string) || 1);
     const pageSize = Math.min(50, Math.max(1, parseInt(size as string) || 10));
-    const skip = (pageNum - 1) * pageSize;
-
-    // Build where clause
+    
+    // Calculate total first to validate page number
     const where: any = {};
-
+    
     // Handle search (OR on name and email)
     if (search && typeof search === 'string') {
       where.OR = [
@@ -65,12 +69,55 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
       where.isActive = active === 'true';
     }
 
+    // Handle role filter
+    if (role && typeof role === 'string') {
+      const validRoles = ['user', 'admin'];
+      if (validRoles.includes(role)) {
+        where.roles = { has: role };
+      }
+    }
+
+    // Handle date range filtering
+    const createdAtFilter: any = {};
+    if (createdFrom && typeof createdFrom === 'string') {
+      try {
+        createdAtFilter.gte = new Date(createdFrom);
+      } catch (error) {
+        // Invalid date format, ignore
+      }
+    }
+    if (createdTo && typeof createdTo === 'string') {
+      try {
+        // Set to end of day for the "to" date
+        const toDate = new Date(createdTo);
+        toDate.setHours(23, 59, 59, 999);
+        createdAtFilter.lte = toDate;
+      } catch (error) {
+        // Invalid date format, ignore
+      }
+    }
+    if (Object.keys(createdAtFilter).length > 0) {
+      where.createdAt = createdAtFilter;
+    }
+
+    // Get total count first for page validation
+    const total = await prisma.user.count({ where });
+    const maxPages = Math.max(1, Math.ceil(total / pageSize));
+    
+    // Ensure page number doesn't exceed available pages
+    if (pageNum > maxPages) {
+      pageNum = maxPages;
+    }
+    
+    const skip = (pageNum - 1) * pageSize;
+
     // Handle sorting
-    const validOrderBy = ['name', 'email', 'createdAt'];
+    const validOrderBy = ['name', 'email', 'createdAt', 'updatedAt'];
     const validOrder = ['asc', 'desc'];
 
     const sortField = validOrderBy.includes(orderBy as string) ? (orderBy as string) : 'createdAt';
     const sortOrder = validOrder.includes(order as string) ? (order as string) : 'desc';
+
 
     // Execute queries
     const [users, total] = await Promise.all([
@@ -94,7 +141,10 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
       prisma.user.count({ where }),
     ]);
 
-    const totalPages = Math.ceil(total / pageSize);
+
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const startItem = total === 0 ? 0 : skip + 1;
+    const endItem = Math.min(skip + pageSize, total);
 
     return res.status(200).json({
       data: users,
@@ -105,6 +155,8 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
         totalPages,
         hasNext: pageNum < totalPages,
         hasPrev: pageNum > 1,
+        startItem,
+        endItem,
       },
     });
   } catch (error) {
@@ -157,8 +209,9 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
       });
     }
 
-    if (!Array.isArray(roles) || !roles.includes('user')) {
-      return res.status(400).json({ error: 'Roles must be an array containing at least "user"' });
+    // Validate roles using utility function
+    if (!validateRoles(roles)) {
+      return res.status(400).json({ error: 'Roles must be an array containing valid roles and at least "user"' });
     }
 
     // Normalize email
@@ -222,6 +275,9 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
         },
       });
     }
+
+    // Log user creation for audit trail
+    await logUserCreation(req, user.id, { name: user.name, email: user.email, roles: user.roles });
 
     return res.status(201).json({
       message: 'User created successfully',
