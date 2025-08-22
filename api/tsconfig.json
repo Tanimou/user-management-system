@@ -17,5 +17,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", ".vercel"]
+  "exclude": ["node_modules", "dist", ".vercel", "tests"]
 }

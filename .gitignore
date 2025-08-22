@@ -12,3 +12,9 @@ build/
 *.swo
 .vercel
 prisma/migrations/
+coverage/
+.nyc_output/
+.coverage/
+*.lcov
+test-results/
+junit.xml
