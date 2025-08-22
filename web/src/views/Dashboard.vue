@@ -35,11 +35,12 @@
 
         <!-- Filters -->
         <n-card class="filters-card">
-          <n-space>
+          <n-space wrap>
             <n-input
               v-model:value="filters.search"
               placeholder="Search by name or email..."
               clearable
+              style="width: 250px"
               @input="debouncedSearch"
             >
               <template #prefix>
@@ -63,6 +64,26 @@
               :options="roleOptions"
             />
 
+            <n-date-picker
+              v-model:value="filters.createdFrom"
+              type="date"
+              placeholder="From Date"
+              clearable
+              style="width: 150px"
+            />
+
+            <n-date-picker
+              v-model:value="filters.createdTo"
+              type="date"
+              placeholder="To Date"
+              clearable
+              style="width: 150px"
+            />
+
+            <n-button @click="clearFilters" secondary>
+              Clear Filters
+            </n-button>
+
             <n-button @click="loadUsers">
               <template #icon>
                 <n-icon><RefreshIcon /></n-icon>
@@ -70,6 +91,13 @@
               Refresh
             </n-button>
           </n-space>
+          
+          <!-- Active Filters Indicator -->
+          <div v-if="activeFiltersCount > 0" class="active-filters-indicator">
+            <n-text depth="3" style="font-size: 12px;">
+              {{ activeFiltersCount }} filter{{ activeFiltersCount > 1 ? 's' : '' }} active
+            </n-text>
+          </div>
         </n-card>
 
         <!-- Users Table -->
@@ -134,6 +162,17 @@ const message = useMessage();
 const dialog = useDialog();
 const authStore = useAuthStore();
 
+// Computed
+const activeFiltersCount = computed(() => {
+  let count = 0;
+  if (filters.search) count++;
+  if (filters.active !== undefined) count++;
+  if (filters.role) count++;
+  if (filters.createdFrom) count++;
+  if (filters.createdTo) count++;
+  return count;
+});
+
 // State
 const users = ref<User[]>([]);
 const loading = ref(false);
@@ -146,6 +185,8 @@ const filters = reactive({
   search: '',
   active: undefined as boolean | undefined,
   role: '' as string,
+  createdFrom: null as string | null,
+  createdTo: null as string | null,
 });
 
 const pagination = reactive({
@@ -209,6 +250,14 @@ async function loadUsers() {
 
     if (filters.role) {
       params.role = filters.role;
+    }
+
+    if (filters.createdFrom) {
+      params.createdFrom = new Date(filters.createdFrom).toISOString().split('T')[0];
+    }
+
+    if (filters.createdTo) {
+      params.createdTo = new Date(filters.createdTo).toISOString().split('T')[0];
     }
 
     // Update URL with current filters
@@ -348,6 +397,26 @@ function initializeFromURL() {
   if (query.size) {
     pagination.pageSize = parseInt(query.size as string) || 10;
   }
+
+  // Handle date filters (from timestamp to Date object)
+  if (query.createdFrom) {
+    filters.createdFrom = new Date(query.createdFrom as string).getTime();
+  }
+  
+  if (query.createdTo) {
+    filters.createdTo = new Date(query.createdTo as string).getTime();
+  }
+}
+
+// Clear all filters
+function clearFilters() {
+  filters.search = '';
+  filters.active = undefined;
+  filters.role = '';
+  filters.createdFrom = null;
+  filters.createdTo = null;
+  pagination.page = 1;
+  loadUsers();
 }
 
 // Watch filters
@@ -357,6 +426,16 @@ watch(() => filters.active, () => {
 });
 
 watch(() => filters.role, () => {
+  pagination.page = 1;
+  loadUsers();
+});
+
+watch(() => filters.createdFrom, () => {
+  pagination.page = 1;
+  loadUsers();
+});
+
+watch(() => filters.createdTo, () => {
   pagination.page = 1;
   loadUsers();
 });
@@ -423,6 +502,12 @@ onMounted(() => {
 
 .filters-card {
   margin-bottom: 24px;
+}
+
+.active-filters-indicator {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
 }
 
 /* Responsive Design */

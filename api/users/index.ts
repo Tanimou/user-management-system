@@ -41,6 +41,8 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
       search = '',
       active,
       role,
+      createdFrom,
+      createdTo,
       orderBy = 'createdAt',
       order = 'desc',
     } = req.query;
@@ -69,6 +71,26 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     // Handle role filter
     if (role && typeof role === 'string' && (role === 'user' || role === 'admin')) {
       where.roles = { has: role };
+    }
+
+    // Handle date range filter
+    const dateRangeFilter: any = {};
+    if (createdFrom && typeof createdFrom === 'string') {
+      const fromDate = new Date(createdFrom);
+      if (!isNaN(fromDate.getTime())) {
+        dateRangeFilter.gte = fromDate;
+      }
+    }
+    if (createdTo && typeof createdTo === 'string') {
+      const toDate = new Date(createdTo);
+      if (!isNaN(toDate.getTime())) {
+        // Set to end of day for inclusive filtering
+        toDate.setHours(23, 59, 59, 999);
+        dateRangeFilter.lte = toDate;
+      }
+    }
+    if (Object.keys(dateRangeFilter).length > 0) {
+      where.createdAt = dateRangeFilter;
     }
 
     // Handle sorting
