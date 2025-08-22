@@ -104,7 +104,7 @@ import prisma from '../lib/prisma';
 import handler from '../users/index';
 import jwt from 'jsonwebtoken';
 import { verifyToken } from '../lib/middleware/enhanced-auth';
-import { getUsersSchema, createUserSchema } from '../lib/schemas/user';
+
 
 describe('Users API - GET /api/users', () => {
   beforeEach(() => {
