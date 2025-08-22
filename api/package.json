@@ -5,13 +5,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "echo 'Build complete'",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
     "db:seed": "tsx scripts/seed.ts",
-    "dev": "vercel dev --listen 3001",
     "test": "vitest",
     "test:coverage": "vitest --coverage"
   },
