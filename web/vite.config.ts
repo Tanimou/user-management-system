@@ -1,27 +1,43 @@
-import vue from "@vitejs/plugin-vue";
-import path from "path";
-import { defineConfig } from "vite";
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': resolve(__dirname, 'src'),
+      '@/components': resolve(__dirname, 'src/components'),
+      '@/stores': resolve(__dirname, 'src/stores'),
+      '@/types': resolve(__dirname, 'src/types'),
+      '@/utils': resolve(__dirname, 'src/utils'),
     },
   },
   server: {
-    port: 3000,
+    port: 5173,
+    host: true,
     proxy: {
-      "/api": {
-        target: "http://localhost:3001",
+      '/api': {
+        target: process.env.VITE_API_BASE_URL || 'http://localhost:3001',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, "/api"),
       },
     },
   },
   build: {
-    outDir: "dist",
-    assetsDir: "assets",
-    sourcemap: false,
+    outDir: 'dist',
+    sourcemap: process.env.NODE_ENV === 'development',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['vue', 'vue-router', 'pinia'],
+          ui: ['naive-ui'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
+  define: {
+    __VUE_OPTIONS_API__: true,
+    __VUE_PROD_DEVTOOLS__: false,
   },
 });

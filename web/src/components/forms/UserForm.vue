@@ -190,8 +190,8 @@ import {
   EyeOff as EyeOffIcon, 
   Refresh as RefreshIcon 
 } from '@vicons/ionicons5';
-import RoleConfirmationModal from './RoleConfirmationModal.vue';
-import PasswordStrengthMeter from './PasswordStrengthMeter.vue';
+import RoleConfirmationModal from '../RoleConfirmationModal.vue';
+import PasswordStrengthMeter from '../common/PasswordStrengthMeter.vue';
 
 interface Props {
   user?: User | null;
