@@ -23,13 +23,9 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
   const isAuthenticated = await requireAuth(req, res);
   if (!isAuthenticated) return;
 
-  if (req.method === 'GET') {
-    return handleGetProfile(req, res);
-  } else if (req.method === 'PUT') {
-    return handleUpdateProfile(req, res);
-  } else {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method === 'GET') return handleGetProfile(req, res);
+  if (req.method === 'PUT') return handleUpdateProfile(req, res);
+  return res.status(405).json({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' });
 }
 
 async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) {
@@ -44,7 +40,6 @@ async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) 
     if (!user || !user.isActive) {
       return res.status(404).json({ error: 'User not found or inactive' });
     }
-
     return res.status(200).json({ data: user });
   } catch (error) {
     console.error('Get profile error:', error);

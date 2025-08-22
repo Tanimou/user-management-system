@@ -1,5 +1,5 @@
 import type { VercelResponse } from '@vercel/node';
-import { requireAuth, requireRole, type AuthenticatedRequest, type JWTPayload } from '../auth.js';
+import { requireAuth, requireRole, type AuthenticatedRequest, type JWTPayload } from '../auth';
 
 /**
  * Authentication middleware for Vercel serverless functions
@@ -35,8 +35,10 @@ export async function requireAuthAndRoles(
     return false;
   }
 
-  // Then check if user has required roles
-  if (!authorizeRoles(req.user, allowedRoles)) {
+  // Then check if user has required roles  
+  const hasRoles = authorizeRoles(req.user, allowedRoles);
+  
+  if (!hasRoles) {
     res.status(403).json({
       error: 'Insufficient permissions. Required roles: ' + allowedRoles.join(', '),
     });

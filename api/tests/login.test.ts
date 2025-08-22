@@ -67,7 +67,7 @@ describe('Login API', () => {
   });
 
   it('should return correct response format for successful login', async () => {
-    const mockUser = createMockUser(1, 'John Doe', 'john@example.com', true, ['user']);
+  const mockUser = { ...createMockUser(1, 'John Doe', 'john@example.com', true, ['user']), password: 'hashed', deletedAt: null } as any;
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
     vi.mocked(verifyPassword).mockResolvedValue(true);
 
@@ -83,6 +83,7 @@ describe('Login API', () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
+      success: true,
       token: 'mock-access-token',
       user: expect.objectContaining({
         id: 1,
@@ -156,7 +157,7 @@ describe('Login API', () => {
   });
 
   it('should handle email case-insensitivity', async () => {
-    const mockUser = createMockUser(1, 'John Doe', 'john@example.com', true, ['user']);
+  const mockUser = { ...createMockUser(1, 'John Doe', 'john@example.com', true, ['user']), password: 'hashed', deletedAt: null } as any;
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
     vi.mocked(verifyPassword).mockResolvedValue(true);
 
@@ -180,8 +181,9 @@ describe('Login API', () => {
   it('should exclude password from user response', async () => {
     const mockUser = {
       ...createMockUser(1, 'John Doe', 'john@example.com', true, ['user']),
-      password: 'hashed-password'
-    };
+      password: 'hashed-password',
+      deletedAt: null
+    } as any;
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
     vi.mocked(verifyPassword).mockResolvedValue(true);
 
@@ -196,6 +198,7 @@ describe('Login API', () => {
     await handler(req, res);
 
     expect(res.json).toHaveBeenCalledWith({
+      success: true,
       token: 'mock-access-token',
       user: expect.not.objectContaining({
         password: expect.anything()

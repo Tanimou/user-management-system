@@ -1,3 +1,39 @@
+User Request Details
+--------------------
+
+Primary current objective: Fix remaining failing backend test files (user detail CRUD, users list & creation, middleware) and standardize error responses so that the entire test suite passes, then provide a final summary. Conversation context captured to allow seamless continuation.
+
+Key Pending Focus Areas (from latest todo list):
+1. Fix user detail handler (GET/PUT/DELETE/restore) – status codes, self-deactivate / self-admin removal guards, inactive visibility.
+2. Fix users list & creation – pagination, filtering (search, role, active), ordering, creation validations (duplicate email handling), proper status codes (201, 400, 409).
+3. Fix middleware tests – ensure role checks not invoked when auth fails; correct return values & error messages.
+4. Standardize error response format – consistent { error, code, details? } across handlers to satisfy tests.
+5. Re-run full suite iteratively until green.
+6. Produce final summary and next steps.
+
+Current Completed Fixes:
+- Frontend & backend startup issues resolved (Node 20, Vercel config)
+- Auth store & router guard improved (login redirect works)
+- TypeScript errors resolved / tests excluded as needed
+- Login handler aligned with tests (response shape & errors)
+- /me handler patched (GET/PUT)
+- /refresh handler patched (revoked/inactive logic, rotation)
+- Token blacklist concurrency & stats logic fixed
+
+Active Todo List Snapshot:
+- (8) Fix user detail handler – in-progress
+- (9) Fix users list & creation – not-started
+- (10) Fix middleware tests – not-started
+- (11) Standardize error responses – not-started
+- (12) Re-run tests until green – not-started
+- (13) Final summary – not-started
+
+Assumptions / Constraints:
+- Must not alter established auth & RBAC invariants (admin self-protection, soft delete)
+- Maintain consistent response envelope expected by existing passing tests
+- Avoid introducing breaking changes to already passing handlers (login, me, refresh, token blacklist)
+
+Next Phase: Planning detailed action steps for remaining tasks.
 # Copilot Processing Summary
 
 ## User Request

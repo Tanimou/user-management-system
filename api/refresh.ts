@@ -11,10 +11,10 @@ import {
 } from './lib/auth.js';
 import prisma, { USER_SELECT_FIELDS } from './lib/prisma.js';
 import { createAuthRateLimit } from './lib/rate-limiter.js';
-import { 
-  blacklistRefreshToken, 
-  isTokenBlacklisted, 
-  protectConcurrentRefresh 
+import {
+  blacklistRefreshToken,
+  isTokenBlacklisted,
+  protectConcurrentRefresh,
 } from './lib/token-blacklist.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

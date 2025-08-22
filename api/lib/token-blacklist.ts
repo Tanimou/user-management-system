@@ -86,46 +86,46 @@ function cleanExpiredEntries(): void {
  * Protect against concurrent refresh requests for the same user
  */
 export function protectConcurrentRefresh<T>(
-  userId: number, 
+  userId: number,
   refreshFunction: () => Promise<T>
 ): Promise<T> {
-  // Check if refresh is already in progress for this user
-  const existingRefresh = refreshInProgress.get(userId);
-  if (existingRefresh) {
-    return existingRefresh;
-  }
-  
-  // Start new refresh and store the promise
-  const refreshPromise = refreshFunction()
-    .finally(() => {
-      // Clean up after completion
+  const existing = refreshInProgress.get(userId);
+  if (existing) return existing;
+
+  let settle: (value: T) => void;
+  let rejecter: (reason?: any) => void;
+  const wrapper = new Promise<T>((resolve, reject) => {
+    settle = resolve;
+    rejecter = reject;
+  });
+
+  refreshInProgress.set(userId, wrapper);
+
+  (async () => {
+    try {
+      const result = await refreshFunction();
+      settle!(result);
+    } catch (err) {
+      rejecter!(err);
+    } finally {
       refreshInProgress.delete(userId);
-    });
-  
-  refreshInProgress.set(userId, refreshPromise);
-  return refreshPromise;
+    }
+  })();
+
+  return wrapper;
 }
 
 /**
  * Get blacklist statistics (for monitoring)
  */
-export function getBlacklistStats(): {
-  totalEntries: number;
-  activeEntries: number;
-} {
+export function getBlacklistStats(): { totalEntries: number; activeEntries: number } {
+  cleanExpiredEntries();
   const now = Date.now();
-  let activeEntries = 0;
-  
+  let active = 0;
   for (const entry of blacklist.values()) {
-    if (now <= entry.expiresAt) {
-      activeEntries++;
-    }
+    if (now <= entry.expiresAt) active++;
   }
-  
-  return {
-    totalEntries: blacklist.size,
-    activeEntries,
-  };
+  return { totalEntries: blacklist.size, activeEntries: active };
 }
 
 /**
