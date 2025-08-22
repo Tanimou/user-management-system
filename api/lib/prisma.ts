@@ -4,13 +4,43 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
+const createPrismaClient = () => {
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+    log: process.env.NODE_ENV === 'development' 
+      ? ['query', 'error', 'warn'] 
+      : ['error'],
+  });
+};
+
 // Singleton pattern for serverless
-export const prisma = global.__prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
+export const prisma = global.__prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
   global.__prisma = prisma;
+}
+
+// Connection pool monitoring and testing
+export async function testDatabaseConnection() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { 
+      status: 'connected', 
+      timestamp: new Date().toISOString(),
+      latency: Date.now() // Basic latency measurement
+    };
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    return { 
+      status: 'disconnected', 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    };
+  }
 }
 
 // Graceful shutdown

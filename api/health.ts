@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { setCORSHeaders, setSecurityHeaders } from './lib/auth.js';
 import { prisma } from './lib/prisma';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -36,12 +37,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       services: {
         database: databaseStatus,
         memory: {
-          used: Math.round(memoryUsage.heapUsed / 1024 / 1024), // MB
-          total: Math.round(memoryUsage.heapTotal / 1024 / 1024), // MB
-        },
+          used: Math.round((memoryUsage.heapUsed / 1024 / 1024) * 100) / 100,
+          total: Math.round((memoryUsage.heapTotal / 1024 / 1024) * 100) / 100
+        }
       },
-      userCount,
+      data: {
+        userCount
+      }
     });
+
   } catch (error) {
     console.error('Health check failed:', error);
     return res.status(500).json({

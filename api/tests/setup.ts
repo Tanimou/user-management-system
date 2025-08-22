@@ -3,6 +3,7 @@ import { beforeAll, afterAll } from 'vitest';
 
 // Mock environment variables for testing
 process.env.DATABASE_URL = "postgresql://test_user:test_password@localhost:5432/user_management_test";
+process.env.DIRECT_URL = "postgresql://test_user:test_password@localhost:5432/user_management_test";
 process.env.JWT_ACCESS_SECRET = "test-jwt-secret-for-testing";
 process.env.JWT_REFRESH_SECRET = "test-refresh-secret-for-testing";
 process.env.JWT_ACCESS_TTL_SECONDS = "900";
