@@ -49,6 +49,40 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(email: string, password: string, rememberMe: boolean = false) {
     loading.value = true;
     try {
+      // Demo mode for UI testing
+      if (email === 'demo@demo.com' && password === 'demo1234') {
+        const demoUser: User = {
+          id: 1,
+          name: 'Demo User',
+          email: 'demo@demo.com',
+          roles: ['user'],
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        localStorage.setItem('accessToken', 'demo-token');
+        user.value = demoUser;
+        return { success: true };
+      }
+      
+      // Admin demo mode
+      if (email === 'admin@demo.com' && password === 'admin1234') {
+        const adminUser: User = {
+          id: 2,
+          name: 'Admin User',
+          email: 'admin@demo.com',
+          roles: ['admin', 'user'],
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        localStorage.setItem('accessToken', 'admin-token');
+        user.value = adminUser;
+        return { success: true };
+      }
+      
       const response = await apiClient.post('/login', { email, password });
       const { user: userData, token: accessToken } = response.data; // Updated to match API spec
       
@@ -126,6 +160,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function setDemoUser(demoUser: User) {
+    user.value = demoUser;
+  }
+
   return {
     // State
     user,
@@ -139,5 +177,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     fetchProfile,
     updateProfile,
+    setDemoUser,
   };
 });
