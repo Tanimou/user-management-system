@@ -8,7 +8,7 @@
  * - Test data factories
  */
 
-import { afterAll, beforeAll, afterEach, beforeEach } from 'vitest';
+import { afterAll, beforeAll, afterEach } from 'vitest';
 
 // Mock environment variables for comprehensive testing
 process.env.NODE_ENV = 'test';
