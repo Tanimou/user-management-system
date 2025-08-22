@@ -35,11 +35,12 @@
 
         <!-- Filters -->
         <n-card class="filters-card">
-          <n-space>
+          <n-space wrap>
             <n-input
               v-model:value="filters.search"
               placeholder="Search by name or email..."
               clearable
+              style="width: 250px"
               @input="debouncedSearch"
             >
               <template #prefix>
@@ -55,6 +56,34 @@
               :options="statusOptions"
             />
 
+            <n-select
+              v-model:value="filters.role"
+              placeholder="Role"
+              clearable
+              style="width: 120px"
+              :options="roleOptions"
+            />
+
+            <n-date-picker
+              v-model:value="filters.createdFrom"
+              type="date"
+              placeholder="From Date"
+              clearable
+              style="width: 150px"
+            />
+
+            <n-date-picker
+              v-model:value="filters.createdTo"
+              type="date"
+              placeholder="To Date"
+              clearable
+              style="width: 150px"
+            />
+
+            <n-button @click="clearFilters" secondary>
+              Clear Filters
+            </n-button>
+
             <n-button @click="loadUsers">
               <template #icon>
                 <n-icon><RefreshIcon /></n-icon>
@@ -62,6 +91,13 @@
               Refresh
             </n-button>
           </n-space>
+          
+          <!-- Active Filters Indicator -->
+          <div v-if="activeFiltersCount > 0" class="active-filters-indicator">
+            <n-text depth="3" style="font-size: 12px;">
+              {{ activeFiltersCount }} filter{{ activeFiltersCount > 1 ? 's' : '' }} active
+            </n-text>
+          </div>
         </n-card>
 
         <!-- Users Table -->
@@ -105,8 +141,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
 import { 
   PersonOutline as PersonIcon,
@@ -121,9 +157,21 @@ import UserTable from '@/components/UserTable.vue';
 import apiClient from '@/api/axios';
 
 const router = useRouter();
+const route = useRoute();
 const message = useMessage();
 const dialog = useDialog();
 const authStore = useAuthStore();
+
+// Computed
+const activeFiltersCount = computed(() => {
+  let count = 0;
+  if (filters.search) count++;
+  if (filters.active !== undefined) count++;
+  if (filters.role) count++;
+  if (filters.createdFrom) count++;
+  if (filters.createdTo) count++;
+  return count;
+});
 
 // State
 const users = ref<User[]>([]);
@@ -136,6 +184,9 @@ const editingUser = ref<User | null>(null);
 const filters = reactive({
   search: '',
   active: undefined as boolean | undefined,
+  role: '' as string,
+  createdFrom: null as string | null,
+  createdTo: null as string | null,
 });
 
 const pagination = reactive({
@@ -158,19 +209,24 @@ const statusOptions = [
   { label: 'Inactive', value: false },
 ];
 
+const roleOptions = [
+  { label: 'User', value: 'user' },
+  { label: 'Admin', value: 'admin' },
+];
+
 const userMenuOptions = [
   { label: 'Profile', key: 'profile' },
   { label: 'Logout', key: 'logout' },
 ];
 
-// Debounced search
+// Debounced search with reduced timeout for better UX
 let searchTimeout: NodeJS.Timeout;
 const debouncedSearch = () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     pagination.page = 1;
     loadUsers();
-  }, 500);
+  }, 300); // Reduced from 500ms for faster response
 };
 
 // Methods
@@ -180,8 +236,8 @@ async function loadUsers() {
     const params: any = {
       page: pagination.page,
       size: pagination.pageSize,
-      sortBy: sorting.sortBy,
-      sortOrder: sorting.sortOrder,
+      orderBy: sorting.sortBy,
+      order: sorting.sortOrder,
     };
 
     if (filters.search) {
@@ -191,6 +247,27 @@ async function loadUsers() {
     if (filters.active !== undefined) {
       params.active = filters.active;
     }
+
+    if (filters.role) {
+      params.role = filters.role;
+    }
+
+    if (filters.createdFrom) {
+      params.createdFrom = new Date(filters.createdFrom).toISOString().split('T')[0];
+    }
+
+    if (filters.createdTo) {
+      params.createdTo = new Date(filters.createdTo).toISOString().split('T')[0];
+    }
+
+    // Update URL with current filters
+    await router.replace({ 
+      query: {
+        ...params,
+        // Convert boolean to string for URL
+        ...(filters.active !== undefined && { active: filters.active.toString() })
+      }
+    });
 
     const response = await apiClient.get('/users', { params });
     users.value = response.data.data;
@@ -289,15 +366,83 @@ function handleProfileUpdated() {
   // The auth store is automatically updated
 }
 
+// Initialize filters from URL parameters
+function initializeFromURL() {
+  const query = route.query;
+  
+  if (query.search) {
+    filters.search = query.search as string;
+  }
+  
+  if (query.active !== undefined) {
+    filters.active = query.active === 'true' ? true : query.active === 'false' ? false : undefined;
+  }
+  
+  if (query.role) {
+    filters.role = query.role as string;
+  }
+  
+  if (query.orderBy) {
+    sorting.sortBy = query.orderBy as string;
+  }
+  
+  if (query.order) {
+    sorting.sortOrder = query.order as 'asc' | 'desc';
+  }
+  
+  if (query.page) {
+    pagination.page = parseInt(query.page as string) || 1;
+  }
+  
+  if (query.size) {
+    pagination.pageSize = parseInt(query.size as string) || 10;
+  }
+
+  // Handle date filters (from timestamp to Date object)
+  if (query.createdFrom) {
+    filters.createdFrom = new Date(query.createdFrom as string).toISOString();
+  }
+
+  if (query.createdTo) {
+    filters.createdTo = new Date(query.createdTo as string).toISOString();
+  }
+}
+
+// Clear all filters
+function clearFilters() {
+  filters.search = '';
+  filters.active = undefined;
+  filters.role = '';
+  filters.createdFrom = null;
+  filters.createdTo = null;
+  pagination.page = 1;
+  loadUsers();
+}
+
 // Watch filters
-import { watch } from 'vue';
 watch(() => filters.active, () => {
+  pagination.page = 1;
+  loadUsers();
+});
+
+watch(() => filters.role, () => {
+  pagination.page = 1;
+  loadUsers();
+});
+
+watch(() => filters.createdFrom, () => {
+  pagination.page = 1;
+  loadUsers();
+});
+
+watch(() => filters.createdTo, () => {
   pagination.page = 1;
   loadUsers();
 });
 
 // Initialize
 onMounted(() => {
+  initializeFromURL();
   loadUsers();
 });
 </script>
@@ -359,8 +504,30 @@ onMounted(() => {
   margin-bottom: 24px;
 }
 
+.active-filters-indicator {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+  .filters-card :deep(.n-space) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filters-card :deep(.n-space .n-space-item) {
+    margin-right: 0 !important;
+    margin-bottom: 8px;
+  }
+  
+  .filters-card :deep(.n-input),
+  .filters-card :deep(.n-select),
+  .filters-card :deep(.n-date-picker) {
+    width: 100% !important;
+  }
+
   .header-content {
     padding: 0 16px;
     height: 56px;
