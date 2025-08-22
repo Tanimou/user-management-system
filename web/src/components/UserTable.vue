@@ -20,6 +20,7 @@ import {
   Refresh as RestoreIcon
 } from '@vicons/ionicons5';
 import { useAuthStore, type User } from '@/stores/auth';
+import { getColumnSortOrder } from '@/utils/sorting';
 
 interface Props {
   users: User[];
@@ -53,13 +54,17 @@ const columns: DataTableColumns<User> = [
     title: 'Name', 
     key: 'name',
     sorter: true,
+
     sortOrder: props.sorting.sortBy === 'name' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : undefined
+
   },
   { 
     title: 'Email', 
     key: 'email',
     sorter: true,
+
     sortOrder: props.sorting.sortBy === 'email' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : undefined
+
   },
   {
     title: 'Roles',
@@ -86,7 +91,9 @@ const columns: DataTableColumns<User> = [
     title: 'Created',
     key: 'createdAt',
     sorter: true,
+
     sortOrder: props.sorting.sortBy === 'createdAt' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : undefined,
+
     render: (row) => new Date(row.createdAt).toLocaleDateString(),
   },
   // Conditionally add deleted column for deactivated users view
@@ -102,7 +109,9 @@ const columns: DataTableColumns<User> = [
     title: 'Updated',
     key: 'updatedAt',
     sorter: true,
+
     sortOrder: props.sorting.sortBy === 'updatedAt' ? (props.sorting.sortOrder === 'asc' ? 'ascend' : 'descend') : undefined,
+
     render: (row) => row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'Never',
   },
   {

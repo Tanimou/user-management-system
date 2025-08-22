@@ -7,10 +7,11 @@ import {
   setSecurityHeaders,
   type AuthenticatedRequest,
 } from '../lib/auth.js';
-import prisma from '../lib/prisma.js';
+import prisma, { USER_SELECT_FIELDS } from '../lib/prisma.js';
 import { validatePasswordPolicy, validateEmail, validateName } from '../lib/validation.js';
 import { validateRoles } from '../lib/role-validation.js';
 import { logUserCreation } from '../lib/audit-logger.js';
+import { getValidatedSorting } from '../lib/sorting.js';
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -113,16 +114,13 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
     const skip = (pageNum - 1) * pageSize;
 
     // Handle sorting
-    const validOrderBy = ['name', 'email', 'createdAt', 'updatedAt'];
-    const validOrder = ['asc', 'desc'];
-
-    const sortField = validOrderBy.includes(orderBy as string) ? (orderBy as string) : 'createdAt';
-    const sortOrder = validOrder.includes(order as string) ? (order as string) : 'desc';
+    const { sortField, sortOrder } = getValidatedSorting(orderBy, order);
 
 
     // Execute queries
     const users = await prisma.user.findMany({
       where,
+
       select: {
         id: true,
         name: true,
@@ -134,6 +132,7 @@ async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
         deletedAt: true,
         avatarUrl: true,
       },
+
       orderBy: { [sortField]: sortOrder },
       skip,
       take: pageSize,
@@ -243,6 +242,7 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
       user = await prisma.user.update({
         where: { id: existingUser.id },
         data: userData,
+
         select: {
           id: true,
           name: true,
@@ -254,11 +254,13 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
           deletedAt: true,
           avatarUrl: true,
         },
+
       });
     } else {
       // Create new user
       user = await prisma.user.create({
         data: userData,
+
         select: {
           id: true,
           name: true,
@@ -270,6 +272,7 @@ async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) 
           deletedAt: true,
           avatarUrl: true,
         },
+
       });
     }
 

@@ -6,7 +6,29 @@ vi.mock('../lib/prisma', () => ({
   default: {
     user: {
       findUnique: vi.fn(),
+      update: vi.fn(),
     }
+  },
+  USER_SELECT_FIELDS: {
+    id: true,
+    name: true,
+    email: true,
+    roles: true,
+    isActive: true,
+    createdAt: true,
+    updatedAt: true,
+    avatarUrl: true,
+  },
+  USER_AUTH_SELECT_FIELDS: {
+    id: true,
+    name: true,
+    email: true,
+    password: true,
+    roles: true,
+    isActive: true,
+    createdAt: true,
+    updatedAt: true,
+    avatarUrl: true,
   }
 }));
 
