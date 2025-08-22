@@ -50,6 +50,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .json({ error: "Invalid email or password format" });
     }
 
+    // Validate password minimum length (8+ characters)
+    if (password.length < 8) {
+      return res.status(400).json({ 
+        error: "Password must be at least 8 characters long" 
+      });
+    }
+
     // Find user by email (case-insensitive)
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
@@ -69,14 +76,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Check if user exists and is active
     if (!user || !user.isActive) {
       recordAuthFailure(req, email);
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ 
+        error: "Invalid email or password",
+        code: "INVALID_CREDENTIALS"
+      });
     }
 
     // Verify password
     const isValidPassword = await verifyPassword(user.password, password);
     if (!isValidPassword) {
       recordAuthFailure(req, email);
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ 
+        error: "Invalid email or password",
+        code: "INVALID_CREDENTIALS"
+      });
     }
 
     // Create JWT payload
@@ -100,9 +113,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { password: _, ...userWithoutPassword } = user;
 
     return res.status(200).json({
-      message: "Login successful",
+      token: accessToken,
       user: userWithoutPassword,
-      accessToken,
     });
   } catch (error) {
     console.error("Login error:", error);
