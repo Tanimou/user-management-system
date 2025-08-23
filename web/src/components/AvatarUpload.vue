@@ -58,13 +58,6 @@
           </div>
         </div>
 
-        <!-- Placeholder Notice -->
-        <n-alert type="info" style="margin: 16px 0">
-          <template #header>Feature Coming Soon</template>
-          Photo upload functionality will be available in a future update. 
-          This is a preview of the interface.
-        </n-alert>
-
         <!-- Action Buttons -->
         <div class="form-actions">
           <n-space>
@@ -92,6 +85,7 @@ import {
   PersonOutline as PersonIcon,
   CloudUploadOutline as CloudUploadIcon
 } from '@vicons/ionicons5';
+import { apiClient } from '../api/axios';
 
 interface Props {
   show: boolean;
@@ -172,24 +166,25 @@ async function handleSave() {
   uploading.value = true;
   
   try {
-    // Placeholder for actual upload implementation
-    // In a real implementation, this would upload to Vercel Blob, S3, etc.
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('avatar', selectedFile.value);
+
+    // Upload to backend
+    const response = await apiClient.uploadFile<{ user: any; avatarUrl: string }>('/upload-avatar', formData);
     
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    if (response.data) {
+      const uploadedUrl = response.data.avatarUrl;
+      emit('avatar-updated', uploadedUrl);
+      message.success('Profile photo updated successfully!');
+      visible.value = false;
+      resetForm();
+    }
     
-    // For now, just use the preview URL as the avatar URL
-    // In real implementation, this would be the uploaded file URL
-    const uploadedUrl = previewUrl.value;
-    
-    emit('avatar-updated', uploadedUrl);
-    message.success('Profile photo updated successfully!');
-    visible.value = false;
-    resetForm();
-    
-  } catch (error) {
+  } catch (error: any) {
     console.error('Avatar upload error:', error);
-    message.error('Failed to upload photo. Please try again.');
+    const errorMessage = error?.message || 'Failed to upload photo. Please try again.';
+    message.error(errorMessage);
   } finally {
     uploading.value = false;
   }
