@@ -43,7 +43,7 @@ jobs:
         run: |
           echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/user_management_test" >> $GITHUB_ENV
           echo "DIRECT_URL=postgresql://test_user:test_password@localhost:5432/user_management_test" >> $GITHUB_ENV
-          echo "JWT_SECRET=test-jwt-secret-for-ci" >> $GITHUB_ENV
+          echo "JWT_ACCESS_SECRET=test-jwt-secret-for-ci" >> $GITHUB_ENV
           echo "JWT_ACCESS_EXPIRES_IN=15m" >> $GITHUB_ENV
           echo "JWT_REFRESH_EXPIRES_IN=7d" >> $GITHUB_ENV
           echo "FRONTEND_URL=http://localhost:3000" >> $GITHUB_ENV

@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
+const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'fallback-secret-change-me';
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
@@ -36,7 +36,7 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
 
 // JWT utilities
 export function signAccessToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, JWT_ACCESS_SECRET, {
     expiresIn: JWT_ACCESS_EXPIRES_IN,
     audience: 'user-management-api',
     issuer: 'user-management-system',
@@ -44,7 +44,7 @@ export function signAccessToken(payload: JWTPayload): string {
 }
 
 export function signRefreshToken(payload: { userId: number }): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, JWT_ACCESS_SECRET, {
     expiresIn: JWT_REFRESH_EXPIRES_IN,
     audience: 'user-management-refresh',
     issuer: 'user-management-system',
@@ -52,14 +52,14 @@ export function signRefreshToken(payload: { userId: number }): string {
 }
 
 export function verifyAccessToken(token: string): JWTPayload {
-  return jwt.verify(token, JWT_SECRET, {
+  return jwt.verify(token, JWT_ACCESS_SECRET, {
     audience: 'user-management-api',
     issuer: 'user-management-system',
   }) as JWTPayload;
 }
 
 export function verifyRefreshToken(token: string): { userId: number } {
-  return jwt.verify(token, JWT_SECRET, {
+  return jwt.verify(token, JWT_ACCESS_SECRET, {
     audience: 'user-management-refresh',
     issuer: 'user-management-system',
   }) as { userId: number };

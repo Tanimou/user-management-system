@@ -24,7 +24,7 @@ export type MiddlewareResult = {
 
 export async function verifyToken(token: string): Promise<MiddlewareResult> {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!, {
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET!, {
       audience: 'user-management-api',
       issuer: 'user-management-system',
     }) as any;    

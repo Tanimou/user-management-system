@@ -1,18 +1,18 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   hashPassword,
-  verifyPassword,
+  requireRole,
   signAccessToken,
   signRefreshToken,
   verifyAccessToken,
+  verifyPassword,
   verifyRefreshToken,
-  requireRole,
-  type JWTPayload
+  type JWTPayload,
 } from '../lib/auth';
 
 // Mock environment variables for testing
 beforeAll(() => {
-  process.env.JWT_SECRET = 'test-secret-key-for-testing';
+  process.env.JWT_ACCESS_SECRET = 'test-secret-key-for-testing';
   process.env.JWT_ACCESS_EXPIRES_IN = '15m';
   process.env.JWT_REFRESH_EXPIRES_IN = '7d';
 });
@@ -21,7 +21,7 @@ describe('Password Hashing', () => {
   it('should hash and verify password correctly', async () => {
     const password = 'testPassword123';
     const hash = await hashPassword(password);
-    
+
     expect(hash).toBeTruthy();
     expect(hash).not.toBe(password);
     expect(await verifyPassword(hash, password)).toBe(true);
@@ -38,7 +38,7 @@ describe('JWT Token Management', () => {
   const mockPayload: JWTPayload = {
     userId: 1,
     email: 'test@example.com',
-    roles: ['user']
+    roles: ['user'],
   };
 
   const mockRefreshPayload = { userId: 1 };
@@ -74,13 +74,13 @@ describe('Role-based Authorization', () => {
   const adminUser: JWTPayload = {
     userId: 1,
     email: 'admin@example.com',
-    roles: ['user', 'admin']
+    roles: ['user', 'admin'],
   };
 
   const regularUser: JWTPayload = {
     userId: 2,
     email: 'user@example.com',
-    roles: ['user']
+    roles: ['user'],
   };
 
   it('should allow admin role access', () => {
