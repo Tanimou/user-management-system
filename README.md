@@ -96,7 +96,7 @@ cp api/.env.example api/.env
 
 ```env
 DATABASE_URL="postgresql://username:password@localhost:5432/user_management"
-JWT_SECRET="your-super-secret-jwt-key-change-in-production"
+JWT_ACCESS_SECRET="your-super-secret-jwt-key-change-in-production"
 FRONTEND_URL="http://localhost:3000"
 ```
 
@@ -272,8 +272,8 @@ Response:
 ### Test Credentials
 
 After running the seed script:
-- **Admin**: admin@example.com / password123
-- **User**: user@example.com / password123
+- **Admin**: admin@example.com / AdminSecure2024!@#
+- **User**: user@example.com / AdminSecure2024!@#
 
 ## 🤝 Contributing
 

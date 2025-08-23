@@ -228,22 +228,22 @@ class ApiClient {
   setAuthToken(token: string): void {
     const wasInLocalStorage = localStorage.getItem('rememberMe') === 'true';
     if (wasInLocalStorage) {
-      localStorage.setItem('accessToken', token);
+      localStorage.setItem('auth_token', token);
     } else {
-      sessionStorage.setItem('accessToken', token);
+      sessionStorage.setItem('auth_token', token);
     }
   }
 
   clearAuthToken(): void {
-    localStorage.removeItem('accessToken');
-    sessionStorage.removeItem('accessToken');
+    localStorage.removeItem('auth_token');
+    sessionStorage.removeItem('auth_token');
     localStorage.removeItem('rememberMe');
   }
 
   getAuthToken(): string | null {
     return (
-      localStorage.getItem('accessToken') ||
-      sessionStorage.getItem('accessToken')
+      localStorage.getItem('auth_token') ||
+      sessionStorage.getItem('auth_token')
     );
   }
 }

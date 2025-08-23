@@ -27,6 +27,8 @@ export const useAuthStore = defineStore('auth', () => {
     const storedToken = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
     if (storedToken) {
       token.value = storedToken;
+      // Also set the axios client token on initialization
+      apiClient.setAuthToken(storedToken);
     }
   };
 
@@ -96,6 +98,8 @@ export const useAuthStore = defineStore('auth', () => {
   token.value = 'demo-token';
   // Persist demo token for tests
   localStorage.setItem(TOKEN_KEY, 'demo-token');
+  // Update axios client with demo token
+  apiClient.setAuthToken('demo-token');
   if (rememberMe) localStorage.setItem('rememberMe', 'true');
         user.value = demoUser;
         return { success: true };
@@ -116,6 +120,8 @@ export const useAuthStore = defineStore('auth', () => {
   token.value = 'admin-token';
   // Persist admin token for tests
   localStorage.setItem(TOKEN_KEY, 'admin-token');
+  // Update axios client with admin token
+  apiClient.setAuthToken('admin-token');
   if (rememberMe) localStorage.setItem('rememberMe', 'true');
         user.value = adminUser;
         return { success: true };
@@ -161,6 +167,8 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       token.value = accessToken;
+      // Update axios client with new token
+      apiClient.setAuthToken(accessToken);
       user.value = userData;
 
       return { success: true };
@@ -203,6 +211,8 @@ export const useAuthStore = defineStore('auth', () => {
   localStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem('rememberMe');
+    // Clear axios client token
+    apiClient.clearAuthToken();
 
     // Then try to call logout endpoint (optional)
     if (tokenToRevoke) {
@@ -277,6 +287,8 @@ export const useAuthStore = defineStore('auth', () => {
       if (newToken) {
         token.value = newToken;
         localStorage.setItem('auth_token', newToken);
+        // Update axios client with new token
+        apiClient.setAuthToken(newToken);
       }
     } catch (error) {
       // If refresh fails, logout user

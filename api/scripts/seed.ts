@@ -21,10 +21,10 @@ async function main() {
   console.log('👤 Creating/updating admin user...');
   
   // In production, use a stronger default password or require it via env var
-  let adminPassword = 'password123';
+  let adminPassword = 'AdminSecure2024!@#';
   if (isProduction) {
-    adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'AdminPassword123!';
-    if (adminPassword === 'AdminPassword123!') {
+    adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'AdminAdminSecure2024!@#!';
+    if (adminPassword === 'AdminAdminSecure2024!@#!') {
       console.warn('⚠️  WARNING: Using default admin password in production. Please change immediately after deployment!');
     }
   }
@@ -52,7 +52,7 @@ async function main() {
   if (!isProduction || process.env.CREATE_SAMPLE_USERS === 'true') {
     console.log('👥 Creating sample users...');
     
-    const userPassword = await argon2.hash('password123', argon2Config);
+    const userPassword = await argon2.hash('AdminSecure2024!@#', argon2Config);
 
     // Create regular user
     await prisma.user.upsert({
@@ -133,8 +133,8 @@ async function main() {
   if (!isProduction) {
     console.log('');
     console.log('🔐 Test credentials:');
-    console.log('📧 Admin: admin@example.com / password123');
-    console.log('👤 User: user@example.com / password123');
+    console.log('📧 Admin: admin@example.com / AdminSecure2024!@#');
+    console.log('👤 User: user@example.com / AdminSecure2024!@#');
   }
 }
 
