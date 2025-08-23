@@ -309,7 +309,7 @@ async function handleLogin() {
         window.location.href = authStore.isAdmin ? '/users' : '/';
       }
     } else {
-      errorMessage.value = getErrorMessage({ message: result.message });
+      errorMessage.value = getErrorMessage({ message: (result as any).message || 'Login failed' });
     }
   } catch (error: any) {
     console.error('Login error:', error);
