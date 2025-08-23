@@ -51,7 +51,11 @@ export const updateUserSchema = Joi.object({
       'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
     }),
   roles: Joi.array().items(Joi.string().valid('user', 'admin')).min(1),
-  isActive: Joi.boolean()
+  isActive: Joi.boolean(),
+  avatarUrl: Joi.string().uri().max(500).allow(null, '').optional()
+    .messages({
+      'string.uri': 'Avatar URL must be a valid URL'
+    })
 }).min(1);
 
 // User ID parameter validation

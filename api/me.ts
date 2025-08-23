@@ -60,9 +60,9 @@ async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) 
 async function handleUpdateProfile(req: AuthenticatedRequest, res: VercelResponse) {
   // Body is already validated by middleware
   const userId = req.user.id;
-  const { name, password } = req.body;
+  const { name, password, avatarUrl } = req.body;
 
-  // Build update data (only name and password allowed for self-updates)
+  // Build update data (only name, password, and avatarUrl allowed for self-updates)
   const updateData: any = { updatedAt: new Date() };
 
   if (name !== undefined) {
@@ -71,6 +71,10 @@ async function handleUpdateProfile(req: AuthenticatedRequest, res: VercelRespons
 
   if (password !== undefined) {
     updateData.password = await hashPassword(password);
+  }
+
+  if (avatarUrl !== undefined) {
+    updateData.avatarUrl = avatarUrl;
   }
 
   // If no valid updates provided

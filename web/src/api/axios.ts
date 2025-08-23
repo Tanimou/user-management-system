@@ -175,6 +175,20 @@ class ApiClient {
     return response.data as ApiResponse<T>;
   }
 
+  // File upload method
+  async uploadFile<T>(url: string, formData: FormData, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const uploadConfig: AxiosRequestConfig = {
+      ...config,
+      headers: {
+        ...config?.headers,
+        'Content-Type': 'multipart/form-data',
+      },
+    };
+    
+    const response = await this.client.post<T>(url, formData, uploadConfig);
+    return response.data as ApiResponse<T>;
+  }
+
   // Utility methods
   setAuthToken(token: string): void {
     const wasInLocalStorage = localStorage.getItem('rememberMe') === 'true';
