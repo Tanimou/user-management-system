@@ -45,11 +45,6 @@ export const updateUserSchema = Joi.object({
     .messages({
       'string.email': 'Please provide a valid email address'
     }),
-  password: Joi.string().min(8).max(128)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .messages({
-      'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-    }),
   roles: Joi.array().items(Joi.string().valid('user', 'admin')).min(1),
   isActive: Joi.boolean(),
   avatarUrl: Joi.string().uri().max(500).allow(null, '').optional()

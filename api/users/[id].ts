@@ -76,7 +76,7 @@ const deleteUserHandler = withCORS(
   )
 );
 
-// POST /api/users/[id] - Restore user (admin only)
+// POST /api/users/[id] - Restore user or Delete user (admin only)
 const restoreUserHandler = withCORS(
   withErrorHandling(
     withAuth(
@@ -88,6 +88,15 @@ const restoreUserHandler = withCORS(
             
             if (action === 'restore') {
               await handleRestoreUser(req, res, userId);
+            } else if (action === 'delete') {
+              // Prevent admin from deleting themselves
+              if (req.user.id === userId) {
+                return res.status(400).json({
+                  error: 'Self-deletion prevented',
+                  message: 'Administrators cannot delete their own account'
+                });
+              }
+              await handleDeleteUser(req, res, userId);
             } else {
               return res.status(400).json({ error: 'Invalid action' });
             }
@@ -137,7 +146,7 @@ async function handleGetUser(req: AuthenticatedRequest, res: VercelResponse, use
 
 async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, userId: number) {
   // Body is already validated by middleware, auth/permissions already checked
-  const { name, email, password, roles, isActive } = req.body;
+  const { name, email, roles, isActive } = req.body;
   
   const isAdmin = req.user.roles.includes('admin');
   
@@ -166,9 +175,7 @@ async function handleUpdateUser(req: AuthenticatedRequest, res: VercelResponse, 
     updateData.email = email;
   }
 
-  if (password !== undefined) {
-    updateData.password = await hashPassword(password);
-  }
+  // Note: Password updates are handled separately via dedicated password change endpoints
 
   if (roles !== undefined) {
     // Role updates only allowed for admins (handled by validation middleware)  

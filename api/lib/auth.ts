@@ -1,6 +1,6 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
@@ -36,57 +36,60 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
 
 // JWT utilities
 export function signAccessToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { 
+  return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_ACCESS_EXPIRES_IN,
     audience: 'user-management-api',
-    issuer: 'user-management-system'
+    issuer: 'user-management-system',
   } as jwt.SignOptions);
 }
 
 export function signRefreshToken(payload: { userId: number }): string {
-  return jwt.sign(payload, JWT_SECRET, { 
+  return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_REFRESH_EXPIRES_IN,
     audience: 'user-management-refresh',
-    issuer: 'user-management-system'
+    issuer: 'user-management-system',
   } as jwt.SignOptions);
 }
 
 export function verifyAccessToken(token: string): JWTPayload {
   return jwt.verify(token, JWT_SECRET, {
     audience: 'user-management-api',
-    issuer: 'user-management-system'
+    issuer: 'user-management-system',
   }) as JWTPayload;
 }
 
 export function verifyRefreshToken(token: string): { userId: number } {
   return jwt.verify(token, JWT_SECRET, {
     audience: 'user-management-refresh',
-    issuer: 'user-management-system'
+    issuer: 'user-management-system',
   }) as { userId: number };
 }
 
 // Cookie utilities
 export function setRefreshCookie(res: VercelResponse, refreshToken: string): void {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   res.setHeader('Set-Cookie', [
-    `refreshToken=${refreshToken}; HttpOnly; Secure=${isProduction}; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/api`
+    `refreshToken=${refreshToken}; HttpOnly; Secure=${isProduction}; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/api`,
   ]);
 }
 
 export function clearRefreshCookie(res: VercelResponse): void {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   res.setHeader('Set-Cookie', [
-    `refreshToken=; HttpOnly; Secure=${isProduction}; SameSite=Strict; Max-Age=0; Path=/api`
+    `refreshToken=; HttpOnly; Secure=${isProduction}; SameSite=Strict; Max-Age=0; Path=/api`,
   ]);
 }
 
 // Authentication middleware
-export async function requireAuth(req: AuthenticatedRequest, res: VercelResponse): Promise<boolean> {
+export async function requireAuth(
+  req: AuthenticatedRequest,
+  res: VercelResponse
+): Promise<boolean> {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({ error: 'Missing or invalid authorization header' });
       return false;
@@ -94,7 +97,7 @@ export async function requireAuth(req: AuthenticatedRequest, res: VercelResponse
 
     const token = authHeader.substring(7);
     const payload = verifyAccessToken(token);
-    
+
     req.user = payload;
     return true;
   } catch (error) {
@@ -112,7 +115,7 @@ export function requireRole(user: JWTPayload | undefined, roles: string[]): bool
 // CORS helper
 export function setCORSHeaders(res: VercelResponse): void {
   const frontendUrl = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
-  
+
   res.setHeader('Access-Control-Allow-Origin', frontendUrl);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -123,41 +126,37 @@ export function setCORSHeaders(res: VercelResponse): void {
 // Security headers
 export function setSecurityHeaders(res: VercelResponse): void {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   // Basic security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  
+
   // Content Security Policy
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'", // Allow inline scripts for dev, restrict in production
-    isProduction
-      ? "script-src 'self'"
-      : "script-src 'self' 'unsafe-inline'", // Allow inline scripts for dev, restrict in production
-    isProduction
-      ? "style-src 'self'"
-      : "style-src 'self' 'unsafe-inline'",  // Allow inline styles for dev, restrict in production
-    "img-src 'self' data: https:",       // Allow images from self, data URLs, and https
-    "font-src 'self' https:",            // Allow fonts from self and https
-    "connect-src 'self' https:",         // Allow connections to self and https
-    "frame-src 'none'",                  // Block frames
-    "object-src 'none'",                 // Block objects/embeds
-    "base-uri 'self'",                   // Restrict base URI
-    "form-action 'self'",                // Restrict form submissions
-    "upgrade-insecure-requests"          // Upgrade HTTP to HTTPS
+    isProduction ? "script-src 'self'" : "script-src 'self' 'unsafe-inline'", // Allow inline scripts for dev, restrict in production
+    isProduction ? "style-src 'self'" : "style-src 'self' 'unsafe-inline'", // Allow inline styles for dev, restrict in production
+    "img-src 'self' data: https:", // Allow images from self, data URLs, and https
+    "font-src 'self' https:", // Allow fonts from self and https
+    "connect-src 'self' https:", // Allow connections to self and https
+    "frame-src 'none'", // Block frames
+    "object-src 'none'", // Block objects/embeds
+    "base-uri 'self'", // Restrict base URI
+    "form-action 'self'", // Restrict form submissions
+    'upgrade-insecure-requests', // Upgrade HTTP to HTTPS
   ].join('; ');
-  
+
   res.setHeader('Content-Security-Policy', csp);
-  
+
   // Strict Transport Security (HTTPS only)
   if (isProduction) {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
-  
+
   // Additional security headers
   res.setHeader('X-DNS-Prefetch-Control', 'off');
   res.setHeader('X-Download-Options', 'noopen');

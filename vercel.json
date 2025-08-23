@@ -96,7 +96,7 @@
       "destination": "/api/health"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api).*)",
       "destination": "/web/dist/$1"
     }
   ]

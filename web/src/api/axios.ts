@@ -1,10 +1,10 @@
-import axios, { 
-  type AxiosInstance, 
-  type AxiosRequestConfig, 
+import axios, {
+  type AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
   type AxiosResponse,
-  type AxiosError 
 } from 'axios';
-import type { ApiResponse, ApiError } from '../types/api';
+import type { ApiError, ApiResponse } from '../types/api';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -28,7 +28,7 @@ class ApiClient {
   private setupInterceptors(): void {
     // Request interceptor
     this.client.interceptors.request.use(
-      (config) => {
+      config => {
         const token = this.getAuthToken();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
@@ -36,15 +36,18 @@ class ApiClient {
 
         // Log requests in development
         if (import.meta.env.DEV) {
-          console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
-            data: config.data,
-            params: config.params,
-          });
+          console.log(
+            `🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`,
+            {
+              data: config.data,
+              params: config.params,
+            }
+          );
         }
 
         return config;
       },
-      (error) => {
+      error => {
         return Promise.reject(error);
       }
     );
@@ -54,15 +57,20 @@ class ApiClient {
       (response: AxiosResponse) => {
         // Log responses in development
         if (import.meta.env.DEV) {
-          console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-            status: response.status,
-            data: response.data,
-          });
+          console.log(
+            `✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`,
+            {
+              status: response.status,
+              data: response.data,
+            }
+          );
         }
         return response;
       },
       async (error: AxiosError) => {
-        const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+        const originalRequest = error.config as AxiosRequestConfig & {
+          _retry?: boolean;
+        };
 
         // Handle 401 errors with token refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
@@ -86,11 +94,14 @@ class ApiClient {
 
         // Log errors in development
         if (import.meta.env.DEV) {
-          console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message,
-          });
+          console.error(
+            `❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+            {
+              status: error.response?.status,
+              data: error.response?.data,
+              message: error.message,
+            }
+          );
         }
 
         return Promise.reject(this.transformError(error));
@@ -106,9 +117,13 @@ class ApiClient {
 
     this.refreshPromise = (async () => {
       try {
-        const response = await axios.post<{ token: string }>(`${this.baseURL}/refresh`, {}, {
-          withCredentials: true, // Include refresh token cookie
-        });
+        const response = await axios.post<{ token: string }>(
+          `${this.baseURL}/refresh`,
+          {},
+          {
+            withCredentials: true, // Include refresh token cookie
+          }
+        );
 
         const { token } = response.data;
         this.setAuthToken(token);
@@ -126,7 +141,7 @@ class ApiClient {
 
   private handleAuthFailure(): void {
     this.clearAuthToken();
-    
+
     // Redirect to login page
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
@@ -145,38 +160,58 @@ class ApiClient {
 
     const { status, data } = error.response;
     const errorData = data as any; // Type assertion for response data
-    
+
     return {
       code: errorData?.error || 'UNKNOWN_ERROR',
-      message: errorData?.message || error.message || 'An unexpected error occurred',
+      message:
+        errorData?.message || error.message || 'An unexpected error occurred',
       status,
       details: errorData?.details,
     };
   }
 
   // Generic HTTP methods
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async get<T>(
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<ApiResponse<T>> {
     const response = await this.client.get<T>(url, config);
     return response.data as ApiResponse<T>;
   }
 
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async post<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<ApiResponse<T>> {
     const response = await this.client.post<T>(url, data, config);
     return response.data as ApiResponse<T>;
   }
 
-  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async put<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<ApiResponse<T>> {
     const response = await this.client.put<T>(url, data, config);
     return response.data as ApiResponse<T>;
   }
 
-  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.client.delete<T>(url, config);
-    return response.data as ApiResponse<T>;
+  async delete<T>(
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<ApiResponse<T>> {
+    // Workaround for Vercel dev server undici Content-Length bug
+    // Use POST with action: 'delete' instead of DELETE method
+    return this.post<T>(url, { action: 'delete' }, config);
   }
 
   // File upload method
-  async uploadFile<T>(url: string, formData: FormData, config?: AxiosRequestConfig): Promise<T> {
+  async uploadFile<T>(
+    url: string,
+    formData: FormData,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
     const uploadConfig: AxiosRequestConfig = {
       ...config,
       headers: {
@@ -184,7 +219,7 @@ class ApiClient {
         'Content-Type': 'multipart/form-data',
       },
     };
-    
+
     const response = await this.client.post<T>(url, formData, uploadConfig);
     return response.data;
   }
@@ -206,7 +241,10 @@ class ApiClient {
   }
 
   getAuthToken(): string | null {
-    return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    return (
+      localStorage.getItem('accessToken') ||
+      sessionStorage.getItem('accessToken')
+    );
   }
 }
 

@@ -1,9 +1,9 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { put } from '@vercel/blob';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import formidable from 'formidable';
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 import { existsSync } from 'fs';
+import { mkdir, readFile, writeFile } from 'fs/promises';
+import { join } from 'path';
 import {
   withAuth,
   withCORS,
@@ -51,60 +51,63 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
 async function handleUpload(req: AuthenticatedRequest, res: VercelResponse) {
   try {
     const userId = req.user.id;
-    
+
     // Parse multipart form data
     const { files } = await parseFormData(req);
-    
+
     // Get the uploaded file
     const uploadedFile = Array.isArray(files.avatar) ? files.avatar[0] : files.avatar;
-    
+
     if (!uploadedFile) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     // Validate file type
     if (!ALLOWED_MIME_TYPES.includes(uploadedFile.mimetype || '')) {
-      return res.status(400).json({ 
-        error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.' 
+      return res.status(400).json({
+        error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.',
       });
     }
 
     // Validate file size
     if (uploadedFile.size > MAX_FILE_SIZE) {
-      return res.status(400).json({ 
-        error: `File size too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.` 
+      return res.status(400).json({
+        error: `File size too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
       });
     }
 
     // Read file content
     const fileContent = await readFile(uploadedFile.filepath);
-    
+
     // Generate unique filename
     const fileExtension = uploadedFile.originalFilename?.split('.').pop() || 'jpg';
     const fileName = `avatars/${userId}-${Date.now()}.${fileExtension}`;
-    
+
     let avatarUrl: string;
 
     // Check if we're in development or production
-    if (process.env.NODE_ENV === 'development' || !process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN === 'development-placeholder-token') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      !process.env.BLOB_READ_WRITE_TOKEN ||
+      process.env.BLOB_READ_WRITE_TOKEN === 'development-placeholder-token'
+    ) {
       // Local development: save to public directory
       const publicDir = join(process.cwd(), 'web', 'public', 'uploads');
       const uploadsDir = join(publicDir, 'avatars');
-      
+
       // Ensure directory exists
       if (!existsSync(uploadsDir)) {
         await mkdir(uploadsDir, { recursive: true });
       }
-      
+
       const localFileName = `${userId}-${Date.now()}.${fileExtension}`;
       const localFilePath = join(uploadsDir, localFileName);
-      
+
       // Save file locally
       await writeFile(localFilePath, fileContent);
-      
+
       // Set URL to local path
       avatarUrl = `/uploads/avatars/${localFileName}`;
-      
     } else {
       // Production: use Vercel Blob
       try {
@@ -121,9 +124,9 @@ async function handleUpload(req: AuthenticatedRequest, res: VercelResponse) {
     // Update user's avatarUrl in database
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { 
+      data: {
         avatarUrl: avatarUrl,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       select: USER_SELECT_FIELDS,
     });
@@ -135,10 +138,9 @@ async function handleUpload(req: AuthenticatedRequest, res: VercelResponse) {
         avatarUrl: avatarUrl,
       },
     });
-
   } catch (error) {
     console.error('Avatar upload error:', error);
-    
+
     if (error instanceof Error) {
       if (error.message.includes('maxFileSize')) {
         return res.status(400).json({ error: 'File size too large' });
@@ -147,7 +149,7 @@ async function handleUpload(req: AuthenticatedRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Too many files uploaded' });
       }
     }
-    
+
     return res.status(500).json({ error: 'Failed to upload avatar' });
   }
 }

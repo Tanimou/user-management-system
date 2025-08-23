@@ -152,16 +152,10 @@ const emit = defineEmits<Emits>();
 
 const authStore = useAuthStore();
 
-// Debug: log admin status
-console.log('UserTable - authStore.user:', authStore.user);
-console.log('UserTable - authStore.isAdmin:', authStore.isAdmin);
-
 // Table columns
 const columns = computed<DataTableColumns<User>>(() => {
   const isAdmin = authStore.isAdmin;
   const currentUserId = authStore.user?.id;
-  
-  console.log('UserTable columns computed - isAdmin:', isAdmin, 'currentUserId:', currentUserId);
   
   return [
   { title: 'ID', key: 'id', width: 80 },
@@ -224,50 +218,58 @@ const columns = computed<DataTableColumns<User>>(() => {
   {
     title: 'Actions',
     key: 'actions',
-    width: 180,
+    width: 200,
     render: (row) => {
-      console.log('Actions render for user:', row.id, 'isAdmin:', isAdmin, 'currentUserId:', currentUserId);
+      const buttons = [];
       
-      return h('div', { style: 'display: flex; gap: 8px; align-items: center;' }, [
-        // Edit button - admin only
-        isAdmin ? h('n-button', {
-          size: 'small',
-          type: 'primary',
-          ghost: true,
-          onClick: () => handleEdit(row),
-        }, {
-          default: () => [
-            h('n-icon', { style: 'margin-right: 4px;' }, { default: () => h(EditIcon) }),
+      // Edit button - admin only
+      if (isAdmin) {
+        buttons.push(
+          h('n-button', {
+            size: 'tiny',
+            type: 'primary',
+            ghost: true,
+            onClick: () => handleEdit(row),
+            style: { marginRight: '6px', fontSize: '12px' }
+          }, [
+            h('n-icon', { style: { marginRight: '3px', fontSize: '12px' } }, [h(EditIcon)]),
             'Edit'
-          ]
-        }) : null,
-        
-        // Delete/Restore buttons - admin only, cannot affect self
-        isAdmin && row.id !== currentUserId ? (
-          row.isActive ? h('n-button', {
-            size: 'small',
-            type: 'error',
-            ghost: true,
-            onClick: () => handleDelete(row),
-          }, {
-            default: () => [
-              h('n-icon', { style: 'margin-right: 4px;' }, { default: () => h(DeleteIcon) }),
+          ])
+        );
+      }
+      
+      // Delete/Restore buttons - admin only, cannot affect self
+      if (isAdmin && row.id !== currentUserId) {
+        if (row.isActive) {
+          buttons.push(
+            h('n-button', {
+              size: 'tiny',
+              type: 'error',
+              ghost: true,
+              onClick: () => handleDelete(row),
+              style: { fontSize: '12px' }
+            }, [
+              h('n-icon', { style: { marginRight: '0.1px', fontSize: '12px' } }, [h(DeleteIcon)]),
               'Delete'
-            ]
-          }) 
-          : h('n-button', {
-            size: 'small',
-            type: 'success',
-            ghost: true,
-            onClick: () => handleRestore(row),
-          }, {
-            default: () => [
-              h('n-icon', { style: 'margin-right: 4px;' }, { default: () => h(RestoreIcon) }),
+            ])
+          );
+        } else {
+          buttons.push(
+            h('n-button', {
+              size: 'tiny',
+              type: 'success',
+              ghost: true,
+              onClick: () => handleRestore(row),
+              style: { fontSize: '12px' }
+            }, [
+              h('n-icon', { style: { marginRight: '0.1px', fontSize: '14px' } }, [h(RestoreIcon)]),
               'Restore'
-            ]
-          })
-        ) : null,
-      ]);
+            ])
+          );
+        }
+      }
+      
+      return h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } }, buttons);
     },
   },
 ];
@@ -575,5 +577,24 @@ function handleRestore(user: User) {
   .user-card {
     padding: 16px;
   }
+}
+
+/* Desktop Actions Button Styling */
+.desktop-table :deep(.n-data-table-td) .n-button.n-button--ghost.n-button--primary-type {
+  --n-color-hover: rgba(24, 160, 88, 0.05);
+  --n-border-color: rgba(24, 160, 88, 0.3);
+  --n-text-color: rgba(24, 160, 88, 0.8);
+}
+
+.desktop-table :deep(.n-data-table-td) .n-button.n-button--ghost.n-button--error-type {
+  --n-color-hover: rgba(208, 58, 82, 0.05);
+  --n-border-color: rgba(208, 58, 82, 0.3);
+  --n-text-color: rgba(208, 58, 82, 0.8);
+}
+
+.desktop-table :deep(.n-data-table-td) .n-button.n-button--ghost.n-button--success-type {
+  --n-color-hover: rgba(24, 160, 88, 0.05);
+  --n-border-color: rgba(24, 160, 88, 0.3);
+  --n-text-color: rgba(24, 160, 88, 0.8);
 }
 </style>

@@ -33,22 +33,23 @@
       />
     </n-form-item>
 
-    <!-- Password Section -->
-    <n-divider title-placement="left">
+    <!-- Password Section - Only for new users -->
+    <n-divider v-if="!isEditing" title-placement="left">
       <n-text style="font-size: 14px; font-weight: 500;">
-        {{ isEditing ? 'Change Password' : 'Password' }}
+        Password
       </n-text>
     </n-divider>
 
     <n-form-item 
-      :label="isEditing ? 'New Password' : 'Password'" 
+      v-if="!isEditing"
+      label="Password" 
       path="password"
     >
       <n-input-group>
         <n-input
           v-model:value="formData.password"
           :type="showPassword ? 'text' : 'password'"
-          :placeholder="isEditing ? 'Leave blank to keep current password' : 'Enter password or generate one'"
+          placeholder="Enter password or generate one"
           clearable
           style="flex: 1"
         />
@@ -58,7 +59,6 @@
           </template>
         </n-button>
         <n-button 
-          v-if="!isEditing || authStore.isAdmin" 
           @click="generatePassword" 
           secondary
           type="primary"
@@ -71,16 +71,16 @@
       </n-input-group>
     </n-form-item>
 
-    <!-- Password Strength Meter -->
+    <!-- Password Strength Meter - Only for new users -->
     <password-strength-meter 
-      v-if="formData.password" 
+      v-if="!isEditing && formData.password" 
       :password="formData.password"
       ref="passwordStrengthRef"
     />
 
-    <!-- Password Confirmation -->
+    <!-- Password Confirmation - Only for new users -->
     <n-form-item 
-      v-if="formData.password" 
+      v-if="!isEditing && formData.password" 
       label="Confirm Password" 
       path="confirmPassword"
     >
@@ -267,22 +267,11 @@ const rules = computed(() => ({
       trigger: 'blur'
     }
   ] : [],
-  password: isEditing.value ? [
-    { 
-      validator: (rule: any, value: string) => {
-        if (!value) return true; // Empty password is allowed for editing
-        if (value.length < 8) {
-          return new Error('Password must be at least 8 characters');
-        }
-        return true;
-      },
-      trigger: 'blur'
-    }
-  ] : [
+  password: !isEditing.value ? [
     { required: true, message: 'Password is required', trigger: 'blur' },
     { min: 8, message: 'Password must be at least 8 characters', trigger: 'blur' }
-  ],
-  confirmPassword: [
+  ] : [],
+  confirmPassword: !isEditing.value ? [
     {
       validator: (rule: any, value: string) => {
         if (formData.password && value !== formData.password) {
@@ -292,7 +281,7 @@ const rules = computed(() => ({
       },
       trigger: ['blur', 'input']
     }
-  ],
+  ] : [],
   roles: [
     { 
       type: 'array', 
@@ -378,8 +367,8 @@ async function handleSubmit() {
   try {
     await formRef.value?.validate();
     
-    // Additional password strength validation for new passwords
-    if (formData.password && passwordStrengthRef.value) {
+    // Additional password strength validation for new users only
+    if (!isEditing.value && formData.password && passwordStrengthRef.value) {
       const isStrong = passwordStrengthRef.value.score >= 65;
       if (!isStrong) {
         message.warning('Please use a stronger password for better security');
@@ -398,8 +387,8 @@ async function handleSubmit() {
       userData.email = formData.email.toLowerCase().trim();
     }
 
-    // Only include password if provided
-    if (formData.password) {
+    // Only include password for new users (never for editing)
+    if (!isEditing.value && formData.password) {
       userData.password = formData.password;
     }
 
