@@ -1,5 +1,4 @@
 import apiClient from '@/api/axios';
-import type { ApiResponse, AuthResponse, RefreshTokenResponse } from '@/types/api';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 
@@ -24,12 +23,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Initialize token from localStorage
   const initializeToken = () => {
-    const storedToken = localStorage.getItem('auth_token');
+    const storedToken = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     if (storedToken) {
       token.value = storedToken;
     }
   };
-  
+
   // Call initialize on store creation
   initializeToken();
 
@@ -59,14 +58,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function login(loginData: { email: string; password: string } | string, password?: string, rememberMe: boolean = false) {
+  async function login(
+    loginData: { email: string; password: string } | string,
+    password?: string,
+    rememberMe: boolean = false
+  ) {
     loading.value = true;
     error.value = null;
-    
+
     // Handle both object and individual parameter styles
     let email: string;
     let pass: string;
-    
+
     if (typeof loginData === 'string') {
       email = loginData;
       pass = password!;
@@ -74,7 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
       email = loginData.email;
       pass = loginData.password;
     }
-    
+
     try {
       // Demo mode for UI testing
       if (email === 'demo@demo.com' && pass === 'demo1234') {
@@ -89,7 +92,12 @@ export const useAuthStore = defineStore('auth', () => {
         };
 
         token.value = 'demo-token';
-        localStorage.setItem('auth_token', 'demo-token');
+        if (rememberMe) {
+          localStorage.setItem('accessToken', 'demo-token');
+          localStorage.setItem('rememberMe', 'true');
+        } else {
+          sessionStorage.setItem('accessToken', 'demo-token');
+        }
         user.value = demoUser;
         return { success: true };
       }
@@ -107,15 +115,22 @@ export const useAuthStore = defineStore('auth', () => {
         };
 
         token.value = 'admin-token';
-        localStorage.setItem('auth_token', 'admin-token');
+        if (rememberMe) {
+          localStorage.setItem('accessToken', 'admin-token');
+          localStorage.setItem('rememberMe', 'true');
+        } else {
+          sessionStorage.setItem('accessToken', 'admin-token');
+        }
         user.value = adminUser;
         return { success: true };
       }
 
-
-      const response = await apiClient.post('/login', { email, password: pass });
+      const response = await apiClient.post('/login', {
+        email,
+        password: pass,
+      });
       console.log('Login API response:', response);
-      
+
       // The login API returns { token, user } in data property
       const responseData = response.data as any;
       const { token: accessToken, user: userData } = responseData;
@@ -130,21 +145,20 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem('rememberMe');
       }
 
-
       token.value = accessToken;
-      localStorage.setItem('auth_token', accessToken);
       user.value = userData;
 
       return { success: true };
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'Login failed';
       error.value = errorMessage;
-      
+
       // Clear any existing token on failure
       token.value = null;
       user.value = null;
-      localStorage.removeItem('auth_token');
-      
+      localStorage.removeItem('accessToken');
+      sessionStorage.removeItem('accessToken');
+
       // Check for specific error types that tests expect to throw
       if (err.response?.status === 401) {
         error.value = err.response.data.error;
@@ -158,7 +172,7 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = 'Network error occurred';
         throw new Error('Network Error');
       }
-      
+
       throw new Error(errorMessage);
     } finally {
       loading.value = false;
@@ -180,7 +194,9 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = null;
       user.value = null;
       error.value = null;
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('accessToken');
+      sessionStorage.removeItem('accessToken');
+      localStorage.removeItem('rememberMe');
     }
   }
 
@@ -200,7 +216,10 @@ export const useAuthStore = defineStore('auth', () => {
     currentPassword?: string;
   }) {
     try {
-      const response = await apiClient.put<{ user?: User; data?: User }>('/me', data);
+      const response = await apiClient.put<{ user?: User; data?: User }>(
+        '/me',
+        data
+      );
       user.value = response.data?.user || response.data?.data || null;
       return { success: true };
     } catch (error: any) {

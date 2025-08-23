@@ -24,8 +24,10 @@ export type MiddlewareResult = {
 
 export async function verifyToken(token: string): Promise<MiddlewareResult> {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!, {
+      audience: 'user-management-api',
+      issuer: 'user-management-system',
+    }) as any;    
     const user = await prisma.user.findUnique({
       where: { 
         id: decoded.userId,
