@@ -131,9 +131,23 @@ export const useAuthStore = defineStore('auth', () => {
       });
       console.log('Login API response:', response);
 
-      // The login API returns { token, user } in data property
-      const responseData = response.data as any;
-      const { token: accessToken, user: userData } = responseData;
+      // Handle different response formats - the response might be the data directly or wrapped
+      let responseData;
+      if (response.data) {
+        responseData = response.data;
+      } else {
+        responseData = response;
+      }
+      
+      console.log('Parsed response data:', responseData);
+      
+      const { token: accessToken, user: userData } = responseData as any;
+      console.log('Extracted token:', accessToken);
+      console.log('Extracted user:', userData);
+
+      if (!accessToken || !userData) {
+        throw new Error('Invalid response: missing token or user data');
+      }
 
       // Store token based on remember me preference
       if (rememberMe) {

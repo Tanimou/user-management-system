@@ -4,7 +4,7 @@ import axios, {
   type AxiosResponse,
   type AxiosError 
 } from 'axios';
-import type { ApiResponse, ApiError } from '@/types/api';
+import type { ApiResponse, ApiError } from '../types/api';
 
 class ApiClient {
   private client: AxiosInstance;

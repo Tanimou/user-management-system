@@ -111,7 +111,7 @@ export function requireRole(user: JWTPayload | undefined, roles: string[]): bool
 
 // CORS helper
 export function setCORSHeaders(res: VercelResponse): void {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const frontendUrl = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
   
   res.setHeader('Access-Control-Allow-Origin', frontendUrl);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
