@@ -111,13 +111,15 @@ const columns = computed<DataTableColumns<User>>(() => [
     key: 'actions',
     width: 150,
     render: (row) => h('div', { style: 'display: flex; gap: 8px;' }, [
-      h('n-button', {
+      // Edit button - admin only
+      authStore.isAdmin ? h('n-button', {
         size: 'small',
         type: 'primary',
         ghost: true,
         onClick: () => handleEdit(row),
-      }, { default: () => h('n-icon', null, { default: () => h(EditIcon) }) }),
+      }, { default: () => h('n-icon', null, { default: () => h(EditIcon) }) }) : null,
       
+      // Delete/Restore buttons - admin only, cannot affect self
       authStore.isAdmin && row.id !== authStore.user?.id ? (
         row.isActive ? h('n-button', {
           size: 'small',
