@@ -1,19 +1,21 @@
 <template>
-
   <div v-if="password" class="password-strength-meter">
-    <div class="strength-bar">
-      <div 
-        class="strength-fill" 
-        :class="strengthClass"
-        :style="{ width: strengthPercentage + '%' }"
-      ></div>
-    </div>
-    <div class="strength-info">
-      <span class="strength-label" :class="strengthClass">
+    <!-- Single line layout: strength bar with inline label -->
+    <div class="strength-container">
+      <div class="strength-bar">
+        <div 
+          class="strength-fill" 
+          :class="strengthClass"
+          :style="{ width: strengthPercentage + '%' }"
+        ></div>
+      </div>
+      <div class="strength-label" :class="strengthClass">
         {{ strengthText }}
-      </span>
+      </div>
     </div>
-    <div class="requirements-grid" v-if="showRequirements">
+    
+    <!-- Optional detailed requirements below -->
+    <div v-if="showRequirements" class="requirements-section">
       <p class="requirements-title">Password Requirements:</p>
       <ul class="requirements-list">
         <li class="requirement-item" :class="{ met: hasMinLength }">
@@ -113,17 +115,24 @@ const strengthClass = computed(() => `strength-${strengthLevel.value}`);
 </script>
 
 <style scoped>
-.password-strength {
+.password-strength-meter {
   margin-top: 8px;
 }
 
+/* Single line container: bar + label side by side */
+.strength-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .strength-bar {
+  flex: 1;
   height: 4px;
   background-color: #e0e0e0;
   border-radius: 2px;
   overflow: hidden;
-  margin-bottom: 8px;
-
 }
 
 .strength-fill {
@@ -132,6 +141,7 @@ const strengthClass = computed(() => `strength-${strengthLevel.value}`);
   border-radius: 2px;
 }
 
+/* Strength level colors */
 .strength-weak {
   background-color: #d32f2f;
   color: #d32f2f;
@@ -152,23 +162,22 @@ const strengthClass = computed(() => `strength-${strengthLevel.value}`);
   color: #1976d2;
 }
 
-.strength-info {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
-}
-
+/* Strength label styling */
 .strength-label {
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
+  min-width: 50px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
-.requirements {
+/* Requirements section */
+.requirements-section {
   margin-top: 12px;
   padding: 12px;
   background-color: #f8f9fa;
-  border-radius: 4px;
+  border-radius: 6px;
   border: 1px solid #e9ecef;
 }
 
@@ -176,6 +185,7 @@ const strengthClass = computed(() => `strength-${strengthLevel.value}`);
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 8px;
+  margin-top: 0;
   color: #495057;
 }
 
@@ -183,47 +193,79 @@ const strengthClass = computed(() => `strength-${strengthLevel.value}`);
   list-style: none;
   padding: 0;
   margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 4px 16px;
 }
 
-.requirements-list li {
+.requirement-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 2px 0;
   font-size: 12px;
   color: #6c757d;
   transition: color 0.2s ease;
 }
 
-.requirements-list li.met {
+.requirement-item.met {
   color: #28a745;
 }
 
-.requirements-list li :deep(.n-icon) {
+.requirement-item :deep(.n-icon) {
   flex-shrink: 0;
 }
 
 /* Dark theme support */
-.dark .requirements {
-  background-color: #2a2a2a;
-  border-color: #404040;
+@media (prefers-color-scheme: dark) {
+  .strength-bar {
+    background-color: #3a3a3a;
+  }
+  
+  .requirements-section {
+    background-color: #2a2a2a;
+    border-color: #404040;
+  }
+  
+  .requirements-title {
+    color: #e0e0e0;
+  }
+  
+  .requirement-item {
+    color: #a0a0a0;
+  }
+  
+  .requirement-item.met {
+    color: #4caf50;
+  }
 }
 
-.dark .requirements-title {
-  color: #e0e0e0;
-}
-
-.dark .requirements-list li {
-  color: #a0a0a0;
-}
-
-.dark .requirements-list li.met {
-  color: #4caf50;
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .strength-bar {
+    border: 1px solid #000;
+  }
+  
+  .strength-fill {
+    border: 1px solid currentColor;
+  }
+  
+  .requirements-section {
+    border-width: 2px;
+  }
 }
 
 /* Mobile responsive */
-@media (max-width: 480px) {
-  .requirements {
+@media (max-width: 600px) {
+  .strength-container {
+    gap: 8px;
+  }
+  
+  .strength-label {
+    min-width: 40px;
+    font-size: 11px;
+  }
+  
+  .requirements-section {
     padding: 8px;
   }
   
@@ -231,9 +273,24 @@ const strengthClass = computed(() => `strength-${strengthLevel.value}`);
     font-size: 12px;
   }
   
-  .requirements-list li {
+  .requirements-list {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  
+  .requirement-item {
     font-size: 11px;
+  }
+}
 
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .strength-fill {
+    transition: none;
+  }
+  
+  .requirement-item {
+    transition: none;
   }
 }
 </style>

@@ -34,30 +34,7 @@
             autocomplete="current-password"
             aria-label="Password"
             @keydown.enter="handleLogin"
-            @input="handlePasswordInput"
           />
-          <!-- Password Strength Indicator -->
-          <div v-if="formData.password && passwordStrength" class="password-strength">
-            <div class="strength-bar">
-              <div 
-                class="strength-fill" 
-                :class="[`strength-${passwordStrength.strength}`]"
-                :style="{ width: `${passwordStrength.score}%` }"
-              ></div>
-            </div>
-            <div class="strength-text">
-              <span :class="[`strength-${passwordStrength.strength}`]">
-                {{ getStrengthText(passwordStrength.strength) }}
-              </span>
-            </div>
-            <div v-if="passwordStrength.feedback.length" class="strength-feedback">
-              <ul>
-                <li v-for="tip in passwordStrength.feedback.slice(0, 2)" :key="tip">
-                  {{ tip }}
-                </li>
-              </ul>
-            </div>
-          </div>
         </n-form-item>
 
         <!-- Remember Me and Forgot Password -->
@@ -154,66 +131,7 @@ const rules = {
 const loading = ref(false);
 const errorMessage = ref('');
 const rateLimitInfo = ref('');
-const passwordStrength = ref<any>(null);
 const lastActivity = ref(Date.now());
-
-// Password strength calculation (simplified client-side version)
-function calculatePasswordStrength(password: string) {
-  if (!password) return null;
-
-  let score = 0;
-  const feedback: string[] = [];
-  
-  // Length scoring
-  if (password.length >= 8) score += 25;
-  if (password.length >= 12) score += 25;
-  
-  // Character variety
-  if (/[a-z]/.test(password)) score += 12.5;
-  if (/[A-Z]/.test(password)) score += 12.5;
-  if (/[0-9]/.test(password)) score += 12.5;
-  if (/[^a-zA-Z0-9]/.test(password)) score += 12.5;
-  
-  // Determine strength level
-  let strength: 'weak' | 'fair' | 'good' | 'strong';
-  if (score < 40) {
-    strength = 'weak';
-    feedback.push('Use a mix of letters, numbers, and symbols');
-  } else if (score < 65) {
-    strength = 'fair';
-    feedback.push('Consider making it longer');
-  } else if (score < 85) {
-    strength = 'good';
-    feedback.push('Good password strength');
-  } else {
-    strength = 'strong';
-    feedback.push('Excellent password strength!');
-  }
-  
-  if (password.length < 12) {
-    feedback.push('Use 12+ characters for better security');
-  }
-  
-  return {
-    strength,
-    score: Math.min(score, 100),
-    feedback
-  };
-}
-
-function getStrengthText(strength: string) {
-  const texts = {
-    weak: 'Weak',
-    fair: 'Fair', 
-    good: 'Good',
-    strong: 'Strong'
-  };
-  return texts[strength as keyof typeof texts] || 'Unknown';
-}
-
-function handlePasswordInput() {
-  passwordStrength.value = calculatePasswordStrength(formData.password);
-}
 
 // Handle forgot password
 function handleForgotPassword() {
@@ -386,66 +304,6 @@ onMounted(async () => {
   margin: 8px 0;
 }
 
-/* Password strength indicator */
-.password-strength {
-  margin-top: 8px;
-}
-
-.strength-bar {
-  width: 100%;
-  height: 4px;
-  background-color: var(--n-border-color);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 4px;
-}
-
-.strength-fill {
-  height: 100%;
-  transition: width 0.3s ease, background-color 0.3s ease;
-  border-radius: 2px;
-}
-
-.strength-weak {
-  background-color: #f56565;
-  color: #f56565;
-}
-
-.strength-fair {
-  background-color: #ed8936;
-  color: #ed8936;
-}
-
-.strength-good {
-  background-color: #38a169;
-  color: #38a169;
-}
-
-.strength-strong {
-  background-color: #2f855a;
-  color: #2f855a;
-}
-
-.strength-text {
-  font-size: 12px;
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.strength-feedback {
-  font-size: 11px;
-  color: var(--n-text-color-disabled);
-}
-
-.strength-feedback ul {
-  margin: 0;
-  padding-left: 16px;
-}
-
-.strength-feedback li {
-  margin: 2px 0;
-}
-
 /* Rate limit alert styling */
 .rate-limit-alert {
   margin-bottom: 8px;
@@ -471,18 +329,14 @@ onMounted(async () => {
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
-  .strength-bar {
-    border: 1px solid var(--n-border-color);
-  }
-  
-  .strength-fill {
-    border: 1px solid currentColor;
+  .login-card {
+    border: 2px solid var(--n-border-color);
   }
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-  .strength-fill {
+  .login-card {
     transition: none;
   }
 }
