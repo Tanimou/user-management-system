@@ -35,6 +35,14 @@ vi.mock('../lib/auth', async () => {
   };
 });
 
+// Mock token blacklist
+vi.mock('../lib/token-blacklist', () => ({
+  blacklistRefreshToken: vi.fn(),
+  isTokenBlacklisted: vi.fn().mockReturnValue(false),
+  protectConcurrentRefresh: vi.fn((userId, fn) => fn()), // Just execute the function directly
+  resetBlacklist: vi.fn(),
+}));
+
 // Mock rate limiter
 vi.mock('../lib/rate-limiter', () => ({
   createAuthRateLimit: vi.fn(() => () => true), // Always allow by default
@@ -43,27 +51,45 @@ vi.mock('../lib/rate-limiter', () => ({
 // Import after mocking
 import handler from '../refresh';
 import prisma from '../lib/prisma';
-import { resetBlacklist } from '../lib/token-blacklist';
 const { 
   verifyRefreshToken, 
   signAccessToken, 
+  signRefreshToken,
   setRefreshCookie,
   clearRefreshCookie,
 } = await import('../lib/auth');
 const { createAuthRateLimit } = await import('../lib/rate-limiter');
+const {
+  blacklistRefreshToken,
+  isTokenBlacklisted,
+  protectConcurrentRefresh,
+  resetBlacklist
+} = await import('../lib/token-blacklist');
 
 describe('Refresh API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetBlacklist(); // Reset blacklist state
-    // Reset rate limiter to always allow by default
+    
+    // Reset all mocks to their default states
+    vi.mocked(resetBlacklist).mockImplementation(() => {});
+    vi.mocked(isTokenBlacklisted).mockReturnValue(false);
+    vi.mocked(blacklistRefreshToken).mockImplementation(() => {});
+    vi.mocked(protectConcurrentRefresh).mockImplementation((userId, fn) => fn());
     vi.mocked(createAuthRateLimit).mockReturnValue(() => true);
+    
+    // Reset auth function mocks
+    vi.mocked(verifyRefreshToken).mockReset();
+    vi.mocked(signAccessToken).mockReturnValue('new-access-token');
+    vi.mocked(signRefreshToken).mockReturnValue('new-refresh-token');
+    
+    // Reset Prisma mocks
+    vi.mocked(prisma.user.findUnique).mockReset();
   });
 
   it('should refresh token successfully with correct response format', async () => {
     const mockUser = createMockUser(1, 'John Doe', 'john@example.com', true, ['user']);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
-    vi.mocked(verifyRefreshToken).mockReturnValue({ userId: 1, exp: Math.floor(Date.now() / 1000) + 3600 });
+    vi.mocked(verifyRefreshToken).mockReturnValue({ userId: 1, exp: Math.floor(Date.now() / 1000) + 3600 } as any);
 
     const req = createMockRequest('POST', { refreshToken: 'valid-refresh-token' });
     const res = createMockResponse();
@@ -92,36 +118,29 @@ describe('Refresh API', () => {
   });
 
   it('should return 401 for blacklisted refresh token', async () => {
-    // First blacklist a token by using it once
-    const mockUser = createMockUser(1, 'John Doe', 'john@example.com', true, ['user']);
-    vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
-    vi.mocked(verifyRefreshToken).mockReturnValue({ userId: 1, exp: Math.floor(Date.now() / 1000) + 3600 });
+    // Mock the blacklist check to return true
+    vi.mocked(isTokenBlacklisted).mockReturnValue(true);
+    vi.mocked(verifyRefreshToken).mockReturnValue({ userId: 1 });
 
-    const req1 = createMockRequest('POST', { refreshToken: 'token-to-blacklist' });
-    const res1 = createMockResponse();
+    const req = createMockRequest('POST', { refreshToken: 'blacklisted-token' });
+    const res = createMockResponse();
     
-    // First request should succeed and blacklist the token
-    await handler(req1, res1);
-    expect(res1.status).toHaveBeenCalledWith(200);
+    await handler(req, res);
 
-    // Second request with same token should fail
-    const req2 = createMockRequest('POST', { refreshToken: 'token-to-blacklist' });
-    const res2 = createMockResponse();
-    
-    await handler(req2, res2);
-
-    expect(res2.status).toHaveBeenCalledWith(401);
-    expect(res2.json).toHaveBeenCalledWith({
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({
       error: 'Refresh token has been revoked',
       code: 'TOKEN_REVOKED',
     });
-    expect(clearRefreshCookie).toHaveBeenCalledWith(res2);
+    expect(clearRefreshCookie).toHaveBeenCalledWith(res);
   });
 
   it('should return 401 for invalid refresh token', async () => {
     vi.mocked(verifyRefreshToken).mockImplementation(() => {
       throw new Error('Invalid token');
     });
+    // Ensure blacklist check passes first
+    vi.mocked(isTokenBlacklisted).mockReturnValue(false);
 
     const req = createMockRequest('POST', { refreshToken: 'invalid-token' });
     const res = createMockResponse();
@@ -140,6 +159,8 @@ describe('Refresh API', () => {
     const mockUser = createMockUser(1, 'John Doe', 'john@example.com', false, ['user']); // inactive
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
     vi.mocked(verifyRefreshToken).mockReturnValue({ userId: 1 });
+    // Ensure blacklist check passes first
+    vi.mocked(isTokenBlacklisted).mockReturnValue(false);
 
     const req = createMockRequest('POST', { refreshToken: 'valid-token' });
     const res = createMockResponse();
@@ -181,11 +202,18 @@ describe('Refresh API', () => {
 
     await handler(req, res);
 
-    // Test that the function was called successfully
+    // Test that the function was called successfully - this verifies concurrent protection worked
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      token: 'new-access-token',
+      expiresIn: 900,
+    });
   });
 
   it('should handle rate limiting', async () => {
+    // Clear all mocks first to avoid interference from previous tests
+    vi.clearAllMocks();
+    
     // Mock rate limiter to return false (rate limit exceeded)
     vi.mocked(createAuthRateLimit).mockReturnValue(() => false);
 

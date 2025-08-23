@@ -23,6 +23,12 @@ describe('Token Blacklist', () => {
     // Clear any existing blacklist entries
     vi.clearAllMocks();
     resetBlacklist();
+    
+    // Ensure clean state for stats
+    const stats = getBlacklistStats();
+    if (stats.totalEntries > 0) {
+      console.warn(`Blacklist not properly reset: ${stats.totalEntries} entries remaining`);
+    }
   });
 
   describe('blacklistRefreshToken', () => {
@@ -104,13 +110,14 @@ describe('Token Blacklist', () => {
 
     it('should return existing promise for concurrent requests', async () => {
       const userId = 1;
-      let resolveFirst: (value: string) => void;
       
+      // Create a deferred promise that we can control
+      let resolveFirst: (value: string) => void;
       const firstPromise = new Promise<string>((resolve) => {
         resolveFirst = resolve;
       });
       
-      const firstFunction = vi.fn().mockReturnValue(firstPromise);
+      const firstFunction = vi.fn().mockImplementation(() => firstPromise);
       const secondFunction = vi.fn().mockResolvedValue('second-result');
 
       // Start first refresh
@@ -119,13 +126,13 @@ describe('Token Blacklist', () => {
       // Start second refresh while first is pending
       const secondRefresh = protectConcurrentRefresh(userId, secondFunction);
 
-      // Second function should not be called
+      // Second function should not be called because first is still pending
       expect(secondFunction).not.toHaveBeenCalled();
 
       // Resolve first promise
       resolveFirst!('first-result');
 
-      // Both should resolve to the same result
+      // Both should resolve to the same result from the first function
       const [firstResult, secondResult] = await Promise.all([firstRefresh, secondRefresh]);
       
       expect(firstResult).toBe('first-result');
@@ -136,8 +143,8 @@ describe('Token Blacklist', () => {
 
     it('should allow new refresh after previous completes', async () => {
       const userId = 1;
-      const firstFunction = vi.fn().mockResolvedValue('first-result');
-      const secondFunction = vi.fn().mockResolvedValue('second-result');
+      const firstFunction = vi.fn().mockImplementation(() => Promise.resolve('first-result'));
+      const secondFunction = vi.fn().mockImplementation(() => Promise.resolve('second-result'));
 
       // First refresh
       const firstResult = await protectConcurrentRefresh(userId, firstFunction);
@@ -154,8 +161,8 @@ describe('Token Blacklist', () => {
     it('should handle different users independently', async () => {
       const userId1 = 1;
       const userId2 = 2;
-      const function1 = vi.fn().mockResolvedValue('result1');
-      const function2 = vi.fn().mockResolvedValue('result2');
+      const function1 = vi.fn().mockImplementation(() => Promise.resolve('result1'));
+      const function2 = vi.fn().mockImplementation(() => Promise.resolve('result2'));
 
       const [result1, result2] = await Promise.all([
         protectConcurrentRefresh(userId1, function1),
@@ -170,8 +177,8 @@ describe('Token Blacklist', () => {
 
     it('should clean up after function throws error', async () => {
       const userId = 1;
-      const errorFunction = vi.fn().mockRejectedValue(new Error('Test error'));
-      const successFunction = vi.fn().mockResolvedValue('success');
+      const errorFunction = vi.fn().mockImplementation(() => Promise.reject(new Error('Test error')));
+      const successFunction = vi.fn().mockImplementation(() => Promise.resolve('success'));
 
       // First function throws error
       await expect(protectConcurrentRefresh(userId, errorFunction)).rejects.toThrow('Test error');

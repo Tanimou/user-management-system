@@ -32,6 +32,9 @@ describe('Enhanced Auth Middleware', () => {
   let mockHandler: vi.Mock;
 
   beforeEach(() => {
+    // Clear all mocks first
+    vi.clearAllMocks();
+    
     mockReq = {
       headers: {},
       body: {},
@@ -45,7 +48,6 @@ describe('Enhanced Auth Middleware', () => {
       end: vi.fn().mockReturnThis()
     };
     mockHandler = vi.fn();
-    vi.clearAllMocks();
   });
 
   describe('verifyToken', () => {
@@ -116,6 +118,8 @@ describe('Enhanced Auth Middleware', () => {
     });
 
     it('should return 401 for missing authorization header', async () => {
+      // Ensure no authorization header
+      mockReq.headers = {};
       const wrappedHandler = withAuth(mockHandler);
       await wrappedHandler(mockReq as VercelRequest, mockRes as VercelResponse);
 
@@ -135,11 +139,15 @@ describe('Authorization Middleware', () => {
   let mockHandler: vi.Mock;
 
   beforeEach(() => {
+    // Clear all mocks first
+    vi.clearAllMocks();
+    
+    // Create completely fresh objects for each test to avoid state leakage
     mockReq = {
       user: {
         id: 1,
         email: 'test@example.com',
-        roles: ['user'],
+        roles: ['user'], // This will be overridden per test as needed
         isActive: true
       },
       body: {},
@@ -150,29 +158,62 @@ describe('Authorization Middleware', () => {
       json: vi.fn().mockReturnThis()
     };
     mockHandler = vi.fn();
-    vi.clearAllMocks();
   });
 
   describe('withRoles', () => {
     it('should allow access with correct role', async () => {
-      const wrappedHandler = withRoles(['user'])(mockHandler);
-      await wrappedHandler(mockReq as AuthenticatedRequest, mockRes as VercelResponse);
+      // Create fresh mocks for this test
+      const testReq = {
+        user: {
+          id: 1,
+          email: 'test@example.com',
+          roles: ['user'],
+          isActive: true
+        },
+        body: {},
+        query: {}
+      };
+      const testRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis()
+      };
+      const testHandler = vi.fn();
 
-      expect(mockHandler).toHaveBeenCalledWith(mockReq, mockRes);
-      expect(mockRes.status).not.toHaveBeenCalled();
+      const wrappedHandler = withRoles(['user'])(testHandler);
+      await wrappedHandler(testReq as AuthenticatedRequest, testRes as VercelResponse);
+
+      expect(testHandler).toHaveBeenCalledWith(testReq, testRes);
+      expect(testRes.status).not.toHaveBeenCalled();
     });
 
     it('should deny access without correct role', async () => {
-      const wrappedHandler = withRoles(['admin'])(mockHandler);
-      await wrappedHandler(mockReq as AuthenticatedRequest, mockRes as VercelResponse);
+      // Create fresh mocks for this test
+      const testReq = {
+        user: {
+          id: 1,
+          email: 'test@example.com',
+          roles: ['user'],
+          isActive: true
+        },
+        body: {},
+        query: {}
+      };
+      const testRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis()
+      };
+      const testHandler = vi.fn();
 
-      expect(mockRes.status).toHaveBeenCalledWith(403);
-      expect(mockRes.json).toHaveBeenCalledWith({
+      const wrappedHandler = withRoles(['admin'])(testHandler);
+      await wrappedHandler(testReq as AuthenticatedRequest, testRes as VercelResponse);
+
+      expect(testRes.status).toHaveBeenCalledWith(403);
+      expect(testRes.json).toHaveBeenCalledWith({
         error: 'Insufficient permissions',
         message: 'Required roles: admin',
         userRoles: ['user']
       });
-      expect(mockHandler).not.toHaveBeenCalled();
+      expect(testHandler).not.toHaveBeenCalled();
     });
   });
 
@@ -188,22 +229,56 @@ describe('Authorization Middleware', () => {
 
   describe('withSelfOrAdmin', () => {
     it('should allow user to access own resources', async () => {
-      const getUserId = (req: AuthenticatedRequest) => req.user.id;
-      const wrappedHandler = withSelfOrAdmin(getUserId)(mockHandler);
+      // Create fresh mocks for this test
+      const testReq = {
+        user: {
+          id: 1,
+          email: 'test@example.com',
+          roles: ['user'],
+          isActive: true
+        },
+        body: {},
+        query: {}
+      };
+      const testRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis()
+      };
+      const testHandler = vi.fn();
       
-      await wrappedHandler(mockReq as AuthenticatedRequest, mockRes as VercelResponse);
+      const getUserId = (req: AuthenticatedRequest) => req.user.id;
+      const wrappedHandler = withSelfOrAdmin(getUserId)(testHandler);
+      
+      await wrappedHandler(testReq as AuthenticatedRequest, testRes as VercelResponse);
 
-      expect(mockHandler).toHaveBeenCalledWith(mockReq, mockRes);
+      expect(testHandler).toHaveBeenCalledWith(testReq, testRes);
     });
 
     it('should deny access to other users resources', async () => {
-      const getUserId = () => 2; // Different user ID
-      const wrappedHandler = withSelfOrAdmin(getUserId)(mockHandler);
+      // Create fresh mocks for this test
+      const testReq = {
+        user: {
+          id: 1,
+          email: 'test@example.com',
+          roles: ['user'],
+          isActive: true
+        },
+        body: {},
+        query: {}
+      };
+      const testRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis()
+      };
+      const testHandler = vi.fn();
       
-      await wrappedHandler(mockReq as AuthenticatedRequest, mockRes as VercelResponse);
+      const getUserId = () => 2; // Different user ID
+      const wrappedHandler = withSelfOrAdmin(getUserId)(testHandler);
+      
+      await wrappedHandler(testReq as AuthenticatedRequest, testRes as VercelResponse);
 
-      expect(mockRes.status).toHaveBeenCalledWith(403);
-      expect(mockHandler).not.toHaveBeenCalled();
+      expect(testRes.status).toHaveBeenCalledWith(403);
+      expect(testHandler).not.toHaveBeenCalled();
     });
   });
 
@@ -246,6 +321,9 @@ describe('Security Middleware', () => {
   let mockHandler: vi.Mock;
 
   beforeEach(() => {
+    // Clear all mocks first
+    vi.clearAllMocks();
+    
     mockReq = { method: 'GET' };
     mockRes = {
       setHeader: vi.fn().mockReturnThis(),
@@ -253,28 +331,44 @@ describe('Security Middleware', () => {
       end: vi.fn().mockReturnThis()
     };
     mockHandler = vi.fn();
-    vi.clearAllMocks();
   });
 
   describe('withCORS', () => {
     it('should set CORS and security headers', async () => {
-      const wrappedHandler = withCORS(mockHandler);
-      await wrappedHandler(mockReq as VercelRequest, mockRes as VercelResponse);
+      // Create fresh mocks for this test
+      const testReq = { method: 'GET' };
+      const testRes = {
+        setHeader: vi.fn().mockReturnThis(),
+        status: vi.fn().mockReturnThis(),
+        end: vi.fn().mockReturnThis()
+      };
+      const testHandler = vi.fn();
 
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', expect.any(String));
-      expect(mockRes.setHeader).toHaveBeenCalledWith('X-Content-Type-Options', 'nosniff');
-      expect(mockRes.setHeader).toHaveBeenCalledWith('X-Frame-Options', 'DENY');
-      expect(mockHandler).toHaveBeenCalledWith(mockReq, mockRes);
+      const wrappedHandler = withCORS(testHandler);
+      await wrappedHandler(testReq as VercelRequest, testRes as VercelResponse);
+
+      expect(testRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', expect.any(String));
+      expect(testRes.setHeader).toHaveBeenCalledWith('X-Content-Type-Options', 'nosniff');
+      expect(testRes.setHeader).toHaveBeenCalledWith('X-Frame-Options', 'DENY');
+      expect(testHandler).toHaveBeenCalledWith(testReq, testRes);
     });
 
     it('should handle OPTIONS preflight requests', async () => {
-      mockReq.method = 'OPTIONS';
-      const wrappedHandler = withCORS(mockHandler);
-      await wrappedHandler(mockReq as VercelRequest, mockRes as VercelResponse);
+      // Create fresh mocks for this test
+      const testReq = { method: 'OPTIONS' };
+      const testRes = {
+        setHeader: vi.fn().mockReturnThis(),
+        status: vi.fn().mockReturnThis(),
+        end: vi.fn().mockReturnThis()
+      };
+      const testHandler = vi.fn();
 
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.end).toHaveBeenCalled();
-      expect(mockHandler).not.toHaveBeenCalled();
+      const wrappedHandler = withCORS(testHandler);
+      await wrappedHandler(testReq as VercelRequest, testRes as VercelResponse);
+
+      expect(testRes.status).toHaveBeenCalledWith(200);
+      expect(testRes.end).toHaveBeenCalled();
+      expect(testHandler).not.toHaveBeenCalled();
     });
   });
 });
@@ -284,12 +378,14 @@ describe('Error Handling Middleware', () => {
   let mockRes: Partial<VercelResponse>;
 
   beforeEach(() => {
+    // Clear all mocks first
+    vi.clearAllMocks();
+    
     mockReq = {};
     mockRes = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn().mockReturnThis()
     };
-    vi.clearAllMocks();
   });
 
   describe('withErrorHandling', () => {
@@ -331,6 +427,9 @@ describe('Validation Middleware', () => {
   let mockHandler: vi.Mock;
 
   beforeEach(() => {
+    // Clear all mocks first
+    vi.clearAllMocks();
+    
     mockReq = {
       body: {},
       query: {}
@@ -340,7 +439,6 @@ describe('Validation Middleware', () => {
       json: vi.fn().mockReturnThis()
     };
     mockHandler = vi.fn();
-    vi.clearAllMocks();
   });
 
   describe('validateBody', () => {
@@ -350,23 +448,41 @@ describe('Validation Middleware', () => {
     });
 
     it('should validate and transform valid body', async () => {
-      mockReq.body = { name: 'John', age: 30, extra: 'removed' };
+      // Create fresh mocks for this test
+      const testReq = {
+        body: { name: 'John', age: 30, extra: 'removed' },
+        query: {}
+      };
+      const testRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis()
+      };
+      const testHandler = vi.fn();
       
-      const wrappedHandler = validateBody(testSchema)(mockHandler);
-      await wrappedHandler(mockReq as VercelRequest, mockRes as VercelResponse);
+      const wrappedHandler = validateBody(testSchema)(testHandler);
+      await wrappedHandler(testReq as VercelRequest, testRes as VercelResponse);
 
-      expect(mockReq.body).toEqual({ name: 'John', age: 30 });
-      expect(mockHandler).toHaveBeenCalledWith(mockReq, mockRes);
+      expect(testReq.body).toEqual({ name: 'John', age: 30 });
+      expect(testHandler).toHaveBeenCalledWith(testReq, testRes);
     });
 
     it('should return validation error for invalid body', async () => {
-      mockReq.body = { name: 'A', age: -1 };
+      // Create fresh mocks for this test
+      const testReq = {
+        body: { name: 'A', age: -1 },
+        query: {}
+      };
+      const testRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis()
+      };
+      const testHandler = vi.fn();
       
-      const wrappedHandler = validateBody(testSchema)(mockHandler);
-      await wrappedHandler(mockReq as VercelRequest, mockRes as VercelResponse);
+      const wrappedHandler = validateBody(testSchema)(testHandler);
+      await wrappedHandler(testReq as VercelRequest, testRes as VercelResponse);
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
+      expect(testRes.status).toHaveBeenCalledWith(400);
+      expect(testRes.json).toHaveBeenCalledWith({
         error: 'Validation failed',
         message: 'Invalid input data',
         details: expect.arrayContaining([
@@ -376,7 +492,7 @@ describe('Validation Middleware', () => {
           })
         ])
       });
-      expect(mockHandler).not.toHaveBeenCalled();
+      expect(testHandler).not.toHaveBeenCalled();
     });
   });
 

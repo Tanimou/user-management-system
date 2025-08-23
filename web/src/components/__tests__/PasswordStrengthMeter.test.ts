@@ -51,12 +51,12 @@ describe('PasswordStrengthMeter', () => {
 
   it('renders correctly with empty password', () => {
     createComponent('');
-    expect(wrapper.find('.password-strength').exists()).toBe(false);
+    expect(wrapper.find('.password-strength-meter').exists()).toBe(false);
   });
 
   it('renders strength meter when password is provided', () => {
     createComponent('password123');
-    expect(wrapper.find('.password-strength').exists()).toBe(true);
+    expect(wrapper.find('.password-strength-meter').exists()).toBe(true);
     expect(wrapper.find('.strength-bar').exists()).toBe(true);
     expect(wrapper.find('.requirements-list').exists()).toBe(true);
   });
@@ -73,7 +73,7 @@ describe('PasswordStrengthMeter', () => {
     createComponent('Pass123!');
     
     // Should meet all requirements including minimum length (8+ chars)
-    const strengthMeter = wrapper.find('.password-strength');
+    const strengthMeter = wrapper.find('.password-strength-meter');
     expect(strengthMeter.exists()).toBe(true);
   });
 
@@ -83,7 +83,7 @@ describe('PasswordStrengthMeter', () => {
     // Change password via props
     await wrapper.setProps({ password: 'StrongPassword123!' });
     
-    expect(wrapper.find('.password-strength').exists()).toBe(true);
+    expect(wrapper.find('.password-strength-meter').exists()).toBe(true);
   });
 
   it('provides fallback calculation when API fails', () => {
