@@ -419,8 +419,19 @@ function handleEditProfile() {
   showProfileModal.value = true;
 }
 
-function handleProfileUpdated() {
-  message.success('Profile updated successfully');
+async function handleProfileUpdated() {
+  console.log('🔄 handleProfileUpdated called');
+  console.log('🔄 Current user before refresh:', user.value);
+  
+  // Ensure the profile data is fully refreshed from the server
+  try {
+    await authStore.fetchProfile();
+    console.log('🔄 Profile refreshed successfully');
+    console.log('🔄 User after refresh:', user.value);
+  } catch (error) {
+    console.warn('❌ Failed to refresh profile after update:', error);
+    // If refresh fails, the user data should still be updated from the API response
+  }
 }
 
 function handleChangePassword() {

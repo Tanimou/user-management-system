@@ -362,6 +362,11 @@ function capitalizeRole(role: string) {
 
 async function handleSubmit() {
   try {
+    console.log('🔄 UserProfile handleSubmit called');
+    console.log('🔄 Form data:', formData);
+    console.log('🔄 Original form data:', originalFormData.value);
+    console.log('🔄 Has changes:', hasChanges.value);
+    
     await formRef.value?.validate();
     loading.value = true;
 
@@ -370,13 +375,17 @@ async function handleSubmit() {
     // Only include name if it changed
     if (formData.name !== originalFormData.value.name) {
       updateData.name = formData.name;
+      console.log('🔄 Name changed:', formData.name);
     }
 
     // Only include password if user wants to change it
     if (formData.currentPassword && formData.newPassword) {
       updateData.currentPassword = formData.currentPassword;
       updateData.password = formData.newPassword;
+      console.log('🔄 Password change requested');
     }
+
+    console.log('🔄 Update data to send:', updateData);
 
     // Don't make request if nothing to update
     if (Object.keys(updateData).length === 0) {
@@ -384,17 +393,20 @@ async function handleSubmit() {
       return;
     }
 
+    console.log('🔄 Calling authStore.updateProfile');
     const result = await authStore.updateProfile(updateData);
+    console.log('🔄 Update result:', result);
     
     if (result.success) {
       message.success('Profile updated successfully');
+      console.log('🔄 Emitting updated event');
       emit('updated');
       show.value = false;
     } else {
       message.error(result.message || 'Failed to update profile');
     }
   } catch (error) {
-    console.log('Form validation failed:', error);
+    console.log('❌ Form validation failed:', error);
   } finally {
     loading.value = false;
   }

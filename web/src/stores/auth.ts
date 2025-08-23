@@ -217,10 +217,21 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchProfile() {
     try {
-      const response = await apiClient.get<{ user?: User; data?: User }>('/me');
-      user.value = response.data?.user || response.data?.data || null;
+      console.log('🔄 fetchProfile called');
+      // API returns { data: userObject }, axios client returns this raw response
+      const response = await apiClient.get<User>('/me');
+      console.log('🔄 fetchProfile raw response:', response);
+      
+      // Extract user from the data field
+      const fetchedUser = (response as any).data || null;
+      console.log('🔄 Extracted user from fetch:', fetchedUser);
+      
+      user.value = fetchedUser;
+      console.log('🔄 User value after fetch:', user.value);
+      
       return user.value;
     } catch (error) {
+      console.error('❌ fetchProfile error:', error);
       throw error;
     }
   }
@@ -231,13 +242,28 @@ export const useAuthStore = defineStore('auth', () => {
     currentPassword?: string;
   }) {
     try {
-      const response = await apiClient.put<{ user?: User; data?: User }>(
+      console.log('🔄 updateProfile called with data:', data);
+      console.log('🔄 Current user before update:', user.value);
+      
+      // API returns { message: "...", data: userObject }, axios client returns this raw response
+      const response = await apiClient.put<User>(
         '/me',
         data
       );
-      user.value = response.data?.user || response.data?.data || null;
+      
+      console.log('🔄 updateProfile raw response:', response);
+      
+      // Extract user from the data field
+      const updatedUser = (response as any).data || null;
+      console.log('🔄 Extracted updated user:', updatedUser);
+      
+      user.value = updatedUser;
+      console.log('🔄 User value after update:', user.value);
+      
       return { success: true };
     } catch (error: any) {
+      console.error('❌ updateProfile error:', error);
+      console.error('❌ Error response:', error.response);
       return {
         success: false,
         message: error.response?.data?.error || 'Update failed',
