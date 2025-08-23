@@ -155,24 +155,24 @@ class ApiClient {
   }
 
   // Generic HTTP methods
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async get<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     const response = await this.client.get<T>(url, config);
-    return response.data as ApiResponse<T>;
+    return response;
   }
 
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     const response = await this.client.post<T>(url, data, config);
-    return response.data as ApiResponse<T>;
+    return response;
   }
 
-  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     const response = await this.client.put<T>(url, data, config);
-    return response.data as ApiResponse<T>;
+    return response;
   }
 
-  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     const response = await this.client.delete<T>(url, config);
-    return response.data as ApiResponse<T>;
+    return response;
   }
 
   // Utility methods

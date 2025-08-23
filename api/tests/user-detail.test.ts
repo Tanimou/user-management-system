@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VercelResponse } from '@vercel/node';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthenticatedRequest } from '../lib/middleware/enhanced-auth.js';
 
 // Mock prisma first - before any other imports
@@ -42,7 +42,7 @@ vi.mock('jsonwebtoken', () => ({
 // Mock middleware - these should pass through and apply logic
 vi.mock('../lib/middleware/index', () => ({
   withCORS: vi.fn((handler: any) => handler),
-  withErrorHandling: vi.fn((handler: any) => handler), 
+  withErrorHandling: vi.fn((handler: any) => handler),
   withAuth: vi.fn((handler: any) => handler),
   withAdminRole: vi.fn((handler: any) => async (req: any, res: any) => {
     if (!req.user?.roles?.includes('admin')) {
@@ -52,15 +52,15 @@ vi.mock('../lib/middleware/index', () => ({
   }),
   withSelfOrAdmin: vi.fn((getUserId: any) => (handler: any) => async (req: any, res: any) => {
     const userIdStr = getUserId(req);
-    
+
     if (isNaN(parseInt(userIdStr))) {
       return res.status(400).json({ error: 'Invalid user ID' });
     }
-    
+
     const targetUserId = parseInt(userIdStr);
     const isAdmin = req.user?.roles?.includes('admin');
     const isSelf = req.user?.id === targetUserId;
-    
+
     if (!isAdmin && !isSelf) {
       return res.status(403).json({ error: 'Permission denied' });
     }
@@ -70,15 +70,15 @@ vi.mock('../lib/middleware/index', () => ({
     const targetUserId = parseInt(req.query.id as string);
     const isAdmin = req.user?.roles?.includes('admin');
     const isSelf = req.user?.id === targetUserId;
-    
+
     if (isSelf && isAdmin && req.body.roles && !req.body.roles.includes('admin')) {
       return res.status(400).json({ error: 'Cannot remove your own admin role' });
     }
-    
+
     if (isSelf && req.body.isActive === false) {
       return res.status(400).json({ error: 'Cannot deactivate yourself' });
     }
-    
+
     return handler(req, res);
   }),
   validateBody: vi.fn((schema: any) => (handler: any) => async (req: any, res: any) => {
@@ -100,15 +100,20 @@ vi.mock('../lib/middleware/index', () => ({
 }));
 
 // Now import the handler and other dependencies
-import handler from '../users/[id]';
 import prisma from '../lib/prisma';
+import handler from '../users/[id]';
 
 // Create test utilities
 function createMockAuthenticatedRequest(
   method: string,
   query: Record<string, string> = {},
   body: any = {},
-  user: AuthenticatedRequest['user'] = { id: 1, email: 'test@example.com', roles: ['user'], isActive: true }
+  user: AuthenticatedRequest['user'] = {
+    id: 1,
+    email: 'test@example.com',
+    roles: ['user'],
+    isActive: true,
+  }
 ): AuthenticatedRequest {
   return {
     method,
@@ -173,9 +178,17 @@ describe('User Detail API - GET /api/users/{id}', () => {
   it('should return 404 for non-existent user', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
-    const req = createMockAuthenticatedRequest('GET', { id: '999' }, {}, { 
-      id: 1, email: 'admin@example.com', roles: ['admin'], isActive: true 
-    });
+    const req = createMockAuthenticatedRequest(
+      'GET',
+      { id: '999' },
+      {},
+      {
+        id: 1,
+        email: 'admin@example.com',
+        roles: ['admin'],
+        isActive: true,
+      }
+    );
     const res = createMockResponse();
 
     await handler(req, res);
@@ -376,7 +389,7 @@ describe('User Detail API - DELETE /api/users/{id}', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       error: 'Self-deletion prevented',
-      message: 'Administrators cannot delete their own account'
+      message: 'Administrators cannot delete their own account',
     });
   });
 });

@@ -1,49 +1,49 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
     component: () => import('@/pages/auth/LoginPage.vue'),
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/',
     name: 'Dashboard',
     component: () => import('@/pages/dashboard/DashboardPage.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/users',
     name: 'Users',
     component: () => import('@/pages/dashboard/DashboardPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/pages/dashboard/DashboardPage.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   // Demo routes without auth for testing
   {
     path: '/demo-user',
     name: 'DemoUser',
     component: () => import('@/pages/dashboard/DashboardPage.vue'),
-    meta: { demo: 'user' }
+    meta: { demo: 'user' },
   },
   {
     path: '/demo-admin',
     name: 'DemoAdmin',
     component: () => import('@/pages/dashboard/DashboardPage.vue'),
-    meta: { demo: 'admin' }
+    meta: { demo: 'admin' },
   },
   // Redirect /dashboard to /
   {
     path: '/dashboard',
-    redirect: '/'
-  }
+    redirect: '/',
+  },
 ];
 
 const router = createRouter({
@@ -54,7 +54,7 @@ const router = createRouter({
       return savedPosition;
     }
     return { top: 0 };
-  }
+  },
 });
 
 // Navigation guards
@@ -62,7 +62,11 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
   // Try to restore auth state from localStorage
-  if (!authStore.isAuthenticated && (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken'))) {
+  if (
+    !authStore.isAuthenticated &&
+    (localStorage.getItem('accessToken') ||
+      sessionStorage.getItem('accessToken'))
+  ) {
     await authStore.initialize();
   }
 
@@ -71,7 +75,7 @@ router.beforeEach(async (to, from, next) => {
     from: from.path,
     isAuthenticated: authStore.isAuthenticated,
     user: authStore.user,
-    meta: to.meta
+    meta: to.meta,
   });
 
   // Handle demo routes

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PasswordStrengthMeter from '../common/PasswordStrengthMeter.vue';
 
 // Mock naive-ui components
@@ -63,7 +63,7 @@ describe('PasswordStrengthMeter', () => {
 
   it('calculates basic requirements correctly', () => {
     createComponent('Password123!');
-    
+
     // Should show all requirements as met
     const requirementItems = wrapper.findAll('li');
     expect(requirementItems.length).toBe(5);
@@ -71,7 +71,7 @@ describe('PasswordStrengthMeter', () => {
 
   it('shows requirements for minimum length', async () => {
     createComponent('Pass123!');
-    
+
     // Should meet all requirements including minimum length (8+ chars)
     const strengthMeter = wrapper.find('.password-strength-meter');
     expect(strengthMeter.exists()).toBe(true);
@@ -79,16 +79,16 @@ describe('PasswordStrengthMeter', () => {
 
   it('handles password changes reactively', async () => {
     createComponent('weak');
-    
+
     // Change password via props
     await wrapper.setProps({ password: 'StrongPassword123!' });
-    
+
     expect(wrapper.find('.password-strength-meter').exists()).toBe(true);
   });
 
   it('provides fallback calculation when API fails', () => {
     createComponent('TestPassword123!');
-    
+
     // The component should still show basic validation
     expect(wrapper.find('.strength-bar').exists()).toBe(true);
     expect(wrapper.find('.requirements-list').exists()).toBe(true);
@@ -96,7 +96,7 @@ describe('PasswordStrengthMeter', () => {
 
   it('exposes validation state correctly', () => {
     createComponent('StrongPassword123!');
-    
+
     // Component should expose validation state
     expect(wrapper.vm).toBeDefined();
   });

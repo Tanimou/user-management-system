@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockRequest, createMockResponse } from '../utils/mocks';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserFactory } from '../factories/user.factory';
+import { createMockRequest, createMockResponse } from '../utils/mocks';
 
 // Mock dependencies
 vi.mock('../../lib/prisma', () => ({
@@ -56,23 +56,23 @@ vi.mock('../../lib/rate-limiter', () => ({
   recordAuthFailure: vi.fn(),
 }));
 
-import handler from '../../login';
-import prisma from '../../lib/prisma';
-import { 
-  setCORSHeaders, 
-  setSecurityHeaders, 
-  verifyPassword, 
+import {
+  setCORSHeaders,
+  setRefreshCookie,
+  setSecurityHeaders,
   signAccessToken,
   signRefreshToken,
-  setRefreshCookie 
+  verifyPassword,
 } from '../../lib/auth';
-import { createAuthRateLimit, recordAuthSuccess, recordAuthFailure } from '../../lib/rate-limiter';
+import prisma from '../../lib/prisma';
+import { createAuthRateLimit, recordAuthFailure, recordAuthSuccess } from '../../lib/rate-limiter';
 import { validatePasswordPolicy } from '../../lib/validation';
+import handler from '../../login';
 
 describe('Login API Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Reset all mocks to default state
     vi.mocked(createAuthRateLimit).mockReturnValue(() => true);
     vi.mocked(validatePasswordPolicy).mockReturnValue({ isValid: true, errors: [] });
@@ -97,12 +97,16 @@ describe('Login API Integration Tests', () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue(testUser as any);
       vi.mocked(verifyPassword).mockResolvedValue(true);
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-          password: 'ValidPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -123,7 +127,7 @@ describe('Login API Integration Tests', () => {
       expect(signRefreshToken).toHaveBeenCalledWith({ userId: testUser.id });
       expect(setRefreshCookie).toHaveBeenCalledWith(res, 'mock-refresh-token');
       expect(recordAuthSuccess).toHaveBeenCalledWith(req, 'test@example.com');
-      
+
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         token: 'mock-access-token',
@@ -149,12 +153,16 @@ describe('Login API Integration Tests', () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue(adminUser as any);
       vi.mocked(verifyPassword).mockResolvedValue(true);
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'admin@example.com',
-          password: 'AdminPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'admin@example.com',
+            password: 'AdminPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -175,12 +183,16 @@ describe('Login API Integration Tests', () => {
     it('should handle non-existent user', async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'nonexistent@example.com',
-          password: 'ValidPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'nonexistent@example.com',
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -202,12 +214,16 @@ describe('Login API Integration Tests', () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue(testUser as any);
       vi.mocked(verifyPassword).mockResolvedValue(false);
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-          password: 'WrongPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+            password: 'WrongPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -229,12 +245,16 @@ describe('Login API Integration Tests', () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue(inactiveUser as any);
       vi.mocked(verifyPassword).mockResolvedValue(true);
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'inactive@example.com',
-          password: 'ValidPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'inactive@example.com',
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -250,11 +270,15 @@ describe('Login API Integration Tests', () => {
 
   describe('Input Validation', () => {
     it('should validate required email field', async () => {
-      const req = createMockRequest('POST', {}, {
-        body: {
-          password: 'ValidPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -266,11 +290,15 @@ describe('Login API Integration Tests', () => {
     });
 
     it('should validate required password field', async () => {
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -284,13 +312,17 @@ describe('Login API Integration Tests', () => {
     it('should validate email format', async () => {
       // Mock user not found for invalid email format
       vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
-      
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'invalid-email',
-          password: 'ValidPassword123!',
-        },
-      });
+
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'invalid-email',
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -306,15 +338,19 @@ describe('Login API Integration Tests', () => {
       // Mock password policy validation to fail for short password
       vi.mocked(validatePasswordPolicy).mockReturnValue({
         isValid: false,
-        errors: ['Password must be at least 8 characters long']
+        errors: ['Password must be at least 8 characters long'],
       });
-      
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-          password: 'short',
-        },
-      });
+
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+            password: 'short',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -335,18 +371,22 @@ describe('Login API Integration Tests', () => {
         res.status(429).json({
           error: 'Too many login attempts',
           code: 'RATE_LIMIT_EXCEEDED',
-          retryAfter: 60
+          retryAfter: 60,
         });
         return false;
       });
       vi.mocked(createAuthRateLimit).mockReturnValue(mockRateLimitMiddleware);
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-          password: 'ValidPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -367,17 +407,21 @@ describe('Login API Integration Tests', () => {
       vi.mocked(setCORSHeaders).mockImplementation(() => {});
       vi.mocked(setSecurityHeaders).mockImplementation(() => {});
       vi.mocked(recordAuthFailure).mockImplementation(() => {});
-      
+
       const testUser = await UserFactory.createUser();
       vi.mocked(prisma.user.findUnique).mockResolvedValue(testUser as any);
       vi.mocked(verifyPassword).mockResolvedValue(false);
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-          password: 'WrongPassword',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+            password: 'WrongPassword',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -419,16 +463,20 @@ describe('Login API Integration Tests', () => {
       vi.mocked(validatePasswordPolicy).mockReturnValue({ isValid: true, errors: [] });
       vi.mocked(setCORSHeaders).mockImplementation(() => {});
       vi.mocked(setSecurityHeaders).mockImplementation(() => {});
-      
+
       // Mock the database error
       vi.mocked(prisma.user.findUnique).mockRejectedValue(new Error('Database connection failed'));
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-          password: 'ValidPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -446,17 +494,21 @@ describe('Login API Integration Tests', () => {
       vi.mocked(validatePasswordPolicy).mockReturnValue({ isValid: true, errors: [] });
       vi.mocked(setCORSHeaders).mockImplementation(() => {});
       vi.mocked(setSecurityHeaders).mockImplementation(() => {});
-      
+
       const testUser = await UserFactory.createUser();
       vi.mocked(prisma.user.findUnique).mockResolvedValue(testUser as any);
       vi.mocked(verifyPassword).mockRejectedValue(new Error('Hash verification failed'));
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-          password: 'ValidPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -474,7 +526,7 @@ describe('Login API Integration Tests', () => {
       vi.mocked(validatePasswordPolicy).mockReturnValue({ isValid: true, errors: [] });
       vi.mocked(setCORSHeaders).mockImplementation(() => {});
       vi.mocked(setSecurityHeaders).mockImplementation(() => {});
-      
+
       const testUser = await UserFactory.createUser();
       vi.mocked(prisma.user.findUnique).mockResolvedValue(testUser as any);
       vi.mocked(verifyPassword).mockResolvedValue(true);
@@ -482,12 +534,16 @@ describe('Login API Integration Tests', () => {
         throw new Error('Token generation failed');
       });
 
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-          password: 'ValidPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -501,12 +557,16 @@ describe('Login API Integration Tests', () => {
 
   describe('Security Headers and CORS', () => {
     it('should set security headers on all responses', async () => {
-      const req = createMockRequest('POST', {}, {
-        body: {
-          email: 'test@example.com',
-          password: 'ValidPassword123!',
-        },
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: {
+            email: 'test@example.com',
+            password: 'ValidPassword123!',
+          },
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);
@@ -516,9 +576,13 @@ describe('Login API Integration Tests', () => {
     });
 
     it('should handle malformed request body', async () => {
-      const req = createMockRequest('POST', {}, {
-        body: 'invalid-json',
-      });
+      const req = createMockRequest(
+        'POST',
+        {},
+        {
+          body: 'invalid-json',
+        }
+      );
       const res = createMockResponse();
 
       await handler(req, res);

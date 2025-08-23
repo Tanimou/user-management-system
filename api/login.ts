@@ -10,7 +10,6 @@ import {
 } from './lib/auth.js';
 import prisma, { USER_AUTH_SELECT_FIELDS } from "./lib/prisma.js";
 import { createAuthRateLimit, recordAuthFailure, recordAuthSuccess } from './lib/rate-limiter.js';
-import { validatePasswordPolicy } from './lib/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -18,13 +17,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   setSecurityHeaders(res);
 
   // Handle preflight OPTIONS request
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   // Only allow POST method
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   // Apply rate limiting before processing login
@@ -38,24 +37,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Validate input
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    if (typeof email !== "string" || typeof password !== "string") {
-      return res
-        .status(400)
-        .json({ error: "Invalid email or password format" });
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Invalid email or password format' });
     }
 
-    // Validate password policy (enhanced validation)
-    const policyValidation = validatePasswordPolicy(password);
-    if (!policyValidation.isValid) {
-      return res.status(400).json({ 
-        error: 'Password does not meet policy requirements',
-        details: policyValidation.errors,
-        code: 'INVALID_PASSWORD_POLICY'
-      });
-    }
+    console.log(`Login attempt for email: ${email}`);
+
+    // Note: Password policy validation should only be applied during password creation/updates, not login
 
     // Find user by email (case-insensitive)
     const user = await prisma.user.findUnique({
@@ -63,24 +54,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       select: USER_AUTH_SELECT_FIELDS,
     });
 
+    console.log(`User found: ${user ? 'Yes' : 'No'}, Active: ${user?.isActive}`);
+
     // Check if user exists and is active
     if (!user || !user.isActive) {
       recordAuthFailure(req, email);
-      return res.status(401).json({ 
-        error: "Invalid email or password",
-        code: "INVALID_CREDENTIALS"
+      console.log(`Login failed - user not found or inactive for: ${email}`);
+      return res.status(401).json({
+        error: 'Invalid email or password',
+        code: 'INVALID_CREDENTIALS',
       });
     }
 
     // Verify password
     const isValidPassword = await verifyPassword(user.password, password);
+    console.log(`Password valid: ${isValidPassword}`);
+
     if (!isValidPassword) {
       recordAuthFailure(req, email);
-      return res.status(401).json({ 
-        error: "Invalid email or password",
-        code: "INVALID_CREDENTIALS"
+      console.log(`Login failed - invalid password for: ${email}`);
+      return res.status(401).json({
+        error: 'Invalid email or password',
+        code: 'INVALID_CREDENTIALS',
       });
     }
+
+    console.log(`Login successful for: ${email}`);
 
     // Create JWT payload
     const jwtPayload: JWTPayload = {
@@ -107,7 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       user: userWithoutPassword,
     });
   } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error('Login error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

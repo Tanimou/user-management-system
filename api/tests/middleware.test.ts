@@ -1,26 +1,35 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { withAuth, verifyToken, type AuthenticatedRequest } from '../lib/middleware/enhanced-auth.js';
-import { withRoles, withAdminRole, withSelfOrAdmin, preventSelfDemotion } from '../lib/middleware/authorize.js';
-import { withCORS } from '../lib/middleware/security.js';
-import { withErrorHandling, AppError } from '../lib/middleware/errors.js';
-import { validateBody, validateQuery } from '../lib/middleware/validation.js';
 import Joi from 'joi';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  preventSelfDemotion,
+  withAdminRole,
+  withRoles,
+  withSelfOrAdmin,
+} from '../lib/middleware/authorize.js';
+import {
+  verifyToken,
+  withAuth,
+  type AuthenticatedRequest,
+} from '../lib/middleware/enhanced-auth.js';
+import { AppError, withErrorHandling } from '../lib/middleware/errors.js';
+import { withCORS } from '../lib/middleware/security.js';
+import { validateBody, validateQuery } from '../lib/middleware/validation.js';
 
 // Mock prisma
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
     user: {
-      findUnique: vi.fn()
-    }
-  }
+      findUnique: vi.fn(),
+    },
+  },
 }));
 
 // Mock JWT
 vi.mock('jsonwebtoken', () => ({
   default: {
-    verify: vi.fn()
-  }
+    verify: vi.fn(),
+  },
 }));
 
 import jwt from 'jsonwebtoken';
@@ -34,18 +43,18 @@ describe('Enhanced Auth Middleware', () => {
   beforeEach(() => {
     // Clear all mocks first
     vi.clearAllMocks();
-    
+
     mockReq = {
       headers: {},
       body: {},
       query: {},
-      method: 'GET'
+      method: 'GET',
     };
     mockRes = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn().mockReturnThis(),
       setHeader: vi.fn().mockReturnThis(),
-      end: vi.fn().mockReturnThis()
+      end: vi.fn().mockReturnThis(),
     };
     mockHandler = vi.fn();
   });
@@ -56,7 +65,7 @@ describe('Enhanced Auth Middleware', () => {
         id: 1,
         email: 'test@example.com',
         roles: ['user'],
-        isActive: true
+        isActive: true,
       };
 
       vi.mocked(jwt.verify).mockReturnValue({ userId: 1 });
@@ -99,7 +108,7 @@ describe('Enhanced Auth Middleware', () => {
         id: 1,
         email: 'test@example.com',
         roles: ['user'],
-        isActive: true
+        isActive: true,
       };
 
       mockReq.headers = { authorization: 'Bearer valid-token' };
@@ -111,7 +120,7 @@ describe('Enhanced Auth Middleware', () => {
 
       expect(mockHandler).toHaveBeenCalledWith(
         expect.objectContaining({
-          user: mockUser
+          user: mockUser,
         }),
         mockRes
       );
@@ -126,7 +135,7 @@ describe('Enhanced Auth Middleware', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
         error: 'Authentication required',
-        message: 'Missing or invalid authorization header'
+        message: 'Missing or invalid authorization header',
       });
       expect(mockHandler).not.toHaveBeenCalled();
     });
@@ -141,21 +150,21 @@ describe('Authorization Middleware', () => {
   beforeEach(() => {
     // Clear all mocks first
     vi.clearAllMocks();
-    
+
     // Create completely fresh objects for each test to avoid state leakage
     mockReq = {
       user: {
         id: 1,
         email: 'test@example.com',
         roles: ['user'], // This will be overridden per test as needed
-        isActive: true
+        isActive: true,
       },
       body: {},
-      query: {}
+      query: {},
     };
     mockRes = {
       status: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis()
+      json: vi.fn().mockReturnThis(),
     };
     mockHandler = vi.fn();
   });
@@ -168,14 +177,14 @@ describe('Authorization Middleware', () => {
           id: 1,
           email: 'test@example.com',
           roles: ['user'],
-          isActive: true
+          isActive: true,
         },
         body: {},
-        query: {}
+        query: {},
       };
       const testRes = {
         status: vi.fn().mockReturnThis(),
-        json: vi.fn().mockReturnThis()
+        json: vi.fn().mockReturnThis(),
       };
       const testHandler = vi.fn();
 
@@ -193,14 +202,14 @@ describe('Authorization Middleware', () => {
           id: 1,
           email: 'test@example.com',
           roles: ['user'],
-          isActive: true
+          isActive: true,
         },
         body: {},
-        query: {}
+        query: {},
       };
       const testRes = {
         status: vi.fn().mockReturnThis(),
-        json: vi.fn().mockReturnThis()
+        json: vi.fn().mockReturnThis(),
       };
       const testHandler = vi.fn();
 
@@ -211,7 +220,7 @@ describe('Authorization Middleware', () => {
       expect(testRes.json).toHaveBeenCalledWith({
         error: 'Insufficient permissions',
         message: 'Required roles: admin',
-        userRoles: ['user']
+        userRoles: ['user'],
       });
       expect(testHandler).not.toHaveBeenCalled();
     });
@@ -235,20 +244,20 @@ describe('Authorization Middleware', () => {
           id: 1,
           email: 'test@example.com',
           roles: ['user'],
-          isActive: true
+          isActive: true,
         },
         body: {},
-        query: {}
+        query: {},
       };
       const testRes = {
         status: vi.fn().mockReturnThis(),
-        json: vi.fn().mockReturnThis()
+        json: vi.fn().mockReturnThis(),
       };
       const testHandler = vi.fn();
-      
+
       const getUserId = (req: AuthenticatedRequest) => req.user.id;
       const wrappedHandler = withSelfOrAdmin(getUserId)(testHandler);
-      
+
       await wrappedHandler(testReq as AuthenticatedRequest, testRes as VercelResponse);
 
       expect(testHandler).toHaveBeenCalledWith(testReq, testRes);
@@ -261,20 +270,20 @@ describe('Authorization Middleware', () => {
           id: 1,
           email: 'test@example.com',
           roles: ['user'],
-          isActive: true
+          isActive: true,
         },
         body: {},
-        query: {}
+        query: {},
       };
       const testRes = {
         status: vi.fn().mockReturnThis(),
-        json: vi.fn().mockReturnThis()
+        json: vi.fn().mockReturnThis(),
       };
       const testHandler = vi.fn();
-      
+
       const getUserId = () => 2; // Different user ID
       const wrappedHandler = withSelfOrAdmin(getUserId)(testHandler);
-      
+
       await wrappedHandler(testReq as AuthenticatedRequest, testRes as VercelResponse);
 
       expect(testRes.status).toHaveBeenCalledWith(403);
@@ -288,12 +297,15 @@ describe('Authorization Middleware', () => {
       mockReq.query = { id: '1' };
       mockReq.body = { roles: ['user'] };
 
-      await preventSelfDemotion(mockHandler)(mockReq as AuthenticatedRequest, mockRes as VercelResponse);
+      await preventSelfDemotion(mockHandler)(
+        mockReq as AuthenticatedRequest,
+        mockRes as VercelResponse
+      );
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
         error: 'Self-demotion prevented',
-        message: 'Administrators cannot remove their own admin privileges'
+        message: 'Administrators cannot remove their own admin privileges',
       });
       expect(mockHandler).not.toHaveBeenCalled();
     });
@@ -303,12 +315,15 @@ describe('Authorization Middleware', () => {
       mockReq.query = { id: '1' };
       mockReq.body = { isActive: false };
 
-      await preventSelfDemotion(mockHandler)(mockReq as AuthenticatedRequest, mockRes as VercelResponse);
+      await preventSelfDemotion(mockHandler)(
+        mockReq as AuthenticatedRequest,
+        mockRes as VercelResponse
+      );
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
         error: 'Self-deactivation prevented',
-        message: 'Administrators cannot deactivate their own account'
+        message: 'Administrators cannot deactivate their own account',
       });
       expect(mockHandler).not.toHaveBeenCalled();
     });
@@ -323,12 +338,12 @@ describe('Security Middleware', () => {
   beforeEach(() => {
     // Clear all mocks first
     vi.clearAllMocks();
-    
+
     mockReq = { method: 'GET' };
     mockRes = {
       setHeader: vi.fn().mockReturnThis(),
       status: vi.fn().mockReturnThis(),
-      end: vi.fn().mockReturnThis()
+      end: vi.fn().mockReturnThis(),
     };
     mockHandler = vi.fn();
   });
@@ -340,14 +355,17 @@ describe('Security Middleware', () => {
       const testRes = {
         setHeader: vi.fn().mockReturnThis(),
         status: vi.fn().mockReturnThis(),
-        end: vi.fn().mockReturnThis()
+        end: vi.fn().mockReturnThis(),
       };
       const testHandler = vi.fn();
 
       const wrappedHandler = withCORS(testHandler);
       await wrappedHandler(testReq as VercelRequest, testRes as VercelResponse);
 
-      expect(testRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', expect.any(String));
+      expect(testRes.setHeader).toHaveBeenCalledWith(
+        'Access-Control-Allow-Origin',
+        expect.any(String)
+      );
       expect(testRes.setHeader).toHaveBeenCalledWith('X-Content-Type-Options', 'nosniff');
       expect(testRes.setHeader).toHaveBeenCalledWith('X-Frame-Options', 'DENY');
       expect(testHandler).toHaveBeenCalledWith(testReq, testRes);
@@ -359,7 +377,7 @@ describe('Security Middleware', () => {
       const testRes = {
         setHeader: vi.fn().mockReturnThis(),
         status: vi.fn().mockReturnThis(),
-        end: vi.fn().mockReturnThis()
+        end: vi.fn().mockReturnThis(),
       };
       const testHandler = vi.fn();
 
@@ -380,11 +398,11 @@ describe('Error Handling Middleware', () => {
   beforeEach(() => {
     // Clear all mocks first
     vi.clearAllMocks();
-    
+
     mockReq = {};
     mockRes = {
       status: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis()
+      json: vi.fn().mockReturnThis(),
     };
   });
 
@@ -400,7 +418,7 @@ describe('Error Handling Middleware', () => {
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({
         error: 'Internal server error',
-        message: 'An unexpected error occurred'
+        message: 'An unexpected error occurred',
       });
     });
 
@@ -415,7 +433,7 @@ describe('Error Handling Middleware', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
         error: 'Custom error',
-        message: 'Custom error'
+        message: 'Custom error',
       });
     });
   });
@@ -429,14 +447,14 @@ describe('Validation Middleware', () => {
   beforeEach(() => {
     // Clear all mocks first
     vi.clearAllMocks();
-    
+
     mockReq = {
       body: {},
-      query: {}
+      query: {},
     };
     mockRes = {
       status: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis()
+      json: vi.fn().mockReturnThis(),
     };
     mockHandler = vi.fn();
   });
@@ -444,21 +462,21 @@ describe('Validation Middleware', () => {
   describe('validateBody', () => {
     const testSchema = Joi.object({
       name: Joi.string().min(2).required(),
-      age: Joi.number().integer().min(0)
+      age: Joi.number().integer().min(0),
     });
 
     it('should validate and transform valid body', async () => {
       // Create fresh mocks for this test
       const testReq = {
         body: { name: 'John', age: 30, extra: 'removed' },
-        query: {}
+        query: {},
       };
       const testRes = {
         status: vi.fn().mockReturnThis(),
-        json: vi.fn().mockReturnThis()
+        json: vi.fn().mockReturnThis(),
       };
       const testHandler = vi.fn();
-      
+
       const wrappedHandler = validateBody(testSchema)(testHandler);
       await wrappedHandler(testReq as VercelRequest, testRes as VercelResponse);
 
@@ -470,14 +488,14 @@ describe('Validation Middleware', () => {
       // Create fresh mocks for this test
       const testReq = {
         body: { name: 'A', age: -1 },
-        query: {}
+        query: {},
       };
       const testRes = {
         status: vi.fn().mockReturnThis(),
-        json: vi.fn().mockReturnThis()
+        json: vi.fn().mockReturnThis(),
       };
       const testHandler = vi.fn();
-      
+
       const wrappedHandler = validateBody(testSchema)(testHandler);
       await wrappedHandler(testReq as VercelRequest, testRes as VercelResponse);
 
@@ -488,9 +506,9 @@ describe('Validation Middleware', () => {
         details: expect.arrayContaining([
           expect.objectContaining({
             field: 'name',
-            message: expect.stringContaining('at least 2 characters')
-          })
-        ])
+            message: expect.stringContaining('at least 2 characters'),
+          }),
+        ]),
       });
       expect(testHandler).not.toHaveBeenCalled();
     });
@@ -499,12 +517,12 @@ describe('Validation Middleware', () => {
   describe('validateQuery', () => {
     const testSchema = Joi.object({
       page: Joi.number().integer().min(1).default(1),
-      size: Joi.number().integer().min(1).max(50).default(10)
+      size: Joi.number().integer().min(1).max(50).default(10),
     });
 
     it('should validate and transform valid query', async () => {
       mockReq.query = { page: '2', size: '20' };
-      
+
       const wrappedHandler = validateQuery(testSchema)(mockHandler);
       await wrappedHandler(mockReq as VercelRequest, mockRes as VercelResponse);
 

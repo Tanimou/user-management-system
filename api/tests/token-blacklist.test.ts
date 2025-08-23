@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   blacklistRefreshToken,
+  getBlacklistStats,
   isTokenBlacklisted,
   protectConcurrentRefresh,
-  getBlacklistStats,
   resetBlacklist,
 } from '../lib/token-blacklist';
 
@@ -12,10 +12,10 @@ vi.mock('crypto', () => ({
   createHash: () => ({
     update: () => ({
       digest: () => ({
-        substring: () => 'mock-token-id'
-      })
-    })
-  })
+        substring: () => 'mock-token-id',
+      }),
+    }),
+  }),
 }));
 
 describe('Token Blacklist', () => {
@@ -23,7 +23,7 @@ describe('Token Blacklist', () => {
     // Clear any existing blacklist entries
     vi.clearAllMocks();
     resetBlacklist();
-    
+
     // Ensure clean state for stats
     const stats = getBlacklistStats();
     if (stats.totalEntries > 0) {
@@ -57,7 +57,7 @@ describe('Token Blacklist', () => {
   describe('isTokenBlacklisted', () => {
     it('should return false for non-blacklisted token', () => {
       const token = 'non-blacklisted-token';
-      
+
       expect(isTokenBlacklisted(token)).toBe(false);
     });
 
@@ -110,19 +110,19 @@ describe('Token Blacklist', () => {
 
     it('should return existing promise for concurrent requests', async () => {
       const userId = 1;
-      
+
       // Create a deferred promise that we can control
       let resolveFirst: (value: string) => void;
-      const firstPromise = new Promise<string>((resolve) => {
+      const firstPromise = new Promise<string>(resolve => {
         resolveFirst = resolve;
       });
-      
+
       const firstFunction = vi.fn().mockImplementation(() => firstPromise);
       const secondFunction = vi.fn().mockResolvedValue('second-result');
 
       // Start first refresh
       const firstRefresh = protectConcurrentRefresh(userId, firstFunction);
-      
+
       // Start second refresh while first is pending
       const secondRefresh = protectConcurrentRefresh(userId, secondFunction);
 
@@ -134,7 +134,7 @@ describe('Token Blacklist', () => {
 
       // Both should resolve to the same result from the first function
       const [firstResult, secondResult] = await Promise.all([firstRefresh, secondRefresh]);
-      
+
       expect(firstResult).toBe('first-result');
       expect(secondResult).toBe('first-result');
       expect(firstFunction).toHaveBeenCalledOnce();
@@ -148,7 +148,7 @@ describe('Token Blacklist', () => {
 
       // First refresh
       const firstResult = await protectConcurrentRefresh(userId, firstFunction);
-      
+
       // Second refresh after first completes
       const secondResult = await protectConcurrentRefresh(userId, secondFunction);
 
@@ -177,7 +177,9 @@ describe('Token Blacklist', () => {
 
     it('should clean up after function throws error', async () => {
       const userId = 1;
-      const errorFunction = vi.fn().mockImplementation(() => Promise.reject(new Error('Test error')));
+      const errorFunction = vi
+        .fn()
+        .mockImplementation(() => Promise.reject(new Error('Test error')));
       const successFunction = vi.fn().mockImplementation(() => Promise.resolve('success'));
 
       // First function throws error
@@ -185,7 +187,7 @@ describe('Token Blacklist', () => {
 
       // Second function should be allowed to run
       const result = await protectConcurrentRefresh(userId, successFunction);
-      
+
       expect(result).toBe('success');
       expect(errorFunction).toHaveBeenCalledOnce();
       expect(successFunction).toHaveBeenCalledOnce();
@@ -204,14 +206,14 @@ describe('Token Blacklist', () => {
       blacklistRefreshToken('expired-token', userId, pastTime);
 
       const stats = getBlacklistStats();
-      
+
       expect(stats.totalEntries).toBe(3);
       expect(stats.activeEntries).toBe(2);
     });
 
     it('should return zero stats when blacklist is empty', () => {
       const stats = getBlacklistStats();
-      
+
       expect(stats.totalEntries).toBe(0);
       expect(stats.activeEntries).toBe(0);
     });

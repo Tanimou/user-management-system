@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { VercelResponse } from '@vercel/node';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Create isolated mocks for each test run
 const requireAuthMock = vi.fn();
@@ -12,13 +12,8 @@ vi.mock('../../lib/auth', () => ({
 }));
 
 // Import after mocking to ensure mock is applied
-const { 
-  authenticateRequest,
-  authorizeRoles,
-  requireAuthAndRoles,
-  requireAdmin,
-  requireUser
-} = await import('../../lib/middleware/auth');
+const { authenticateRequest, authorizeRoles, requireAuthAndRoles, requireAdmin, requireUser } =
+  await import('../../lib/middleware/auth');
 
 import type { AuthenticatedRequest, JWTPayload } from '../../lib/middleware/auth';
 
@@ -55,11 +50,11 @@ describe('Authentication Middleware', () => {
     it('should return true for valid authentication', async () => {
       const req = createMockRequest();
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
-      
+
       const result = await authenticateRequest(req, res);
-      
+
       expect(result).toBe(true);
       expect(requireAuthMock).toHaveBeenCalledWith(req, res);
     });
@@ -67,11 +62,11 @@ describe('Authentication Middleware', () => {
     it('should return false for invalid authentication', async () => {
       const req = createMockRequest();
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(false);
-      
+
       const result = await authenticateRequest(req, res);
-      
+
       expect(result).toBe(false);
       expect(requireAuthMock).toHaveBeenCalledWith(req, res);
     });
@@ -82,13 +77,13 @@ describe('Authentication Middleware', () => {
       const user: JWTPayload = {
         userId: 1,
         email: 'test@example.com',
-        roles: ['user', 'admin']
+        roles: ['user', 'admin'],
       };
-      
+
       requireRoleMock.mockReturnValue(true);
-      
+
       const result = authorizeRoles(user, ['admin']);
-      
+
       expect(result).toBe(true);
       expect(requireRoleMock).toHaveBeenCalledWith(user, ['admin']);
     });
@@ -97,22 +92,22 @@ describe('Authentication Middleware', () => {
       const user: JWTPayload = {
         userId: 1,
         email: 'test@example.com',
-        roles: ['user']
+        roles: ['user'],
       };
-      
+
       requireRoleMock.mockReturnValue(false);
-      
+
       const result = authorizeRoles(user, ['admin']);
-      
+
       expect(result).toBe(false);
       expect(requireRoleMock).toHaveBeenCalledWith(user, ['admin']);
     });
 
     it('should handle undefined user', () => {
       requireRoleMock.mockReturnValue(false);
-      
+
       const result = authorizeRoles(undefined, ['user']);
-      
+
       expect(result).toBe(false);
       expect(requireRoleMock).toHaveBeenCalledWith(undefined, ['user']);
     });
@@ -123,16 +118,16 @@ describe('Authentication Middleware', () => {
       const user: JWTPayload = {
         userId: 1,
         email: 'test@example.com',
-        roles: ['admin']
+        roles: ['admin'],
       };
       const req = createMockRequest(user);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(true);
-      
+
       const result = await requireAuthAndRoles(req, res, ['admin']);
-      
+
       expect(result).toBe(true);
       expect(requireAuthMock).toHaveBeenCalledWith(req, res);
       expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['admin']);
@@ -144,14 +139,14 @@ describe('Authentication Middleware', () => {
       vi.resetAllMocks();
       requireAuthMock.mockReset();
       requireRoleMock.mockReset();
-      
+
       const req = createMockRequest();
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(false);
-      
+
       const result = await requireAuthAndRoles(req, res, ['admin']);
-      
+
       expect(result).toBe(false);
       expect(requireAuthMock).toHaveBeenCalledWith(req, res);
       expect(requireRoleMock).not.toHaveBeenCalled();
@@ -163,20 +158,20 @@ describe('Authentication Middleware', () => {
       vi.resetAllMocks();
       requireAuthMock.mockReset();
       requireRoleMock.mockReset();
-      
+
       const user: JWTPayload = {
         userId: 1,
         email: 'test@example.com',
-        roles: ['user']
+        roles: ['user'],
       };
       const req = createMockRequest(user);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(false);
-      
+
       const result = await requireAuthAndRoles(req, res, ['admin']);
-      
+
       expect(result).toBe(false);
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
@@ -188,16 +183,16 @@ describe('Authentication Middleware', () => {
       const user: JWTPayload = {
         userId: 1,
         email: 'test@example.com',
-        roles: ['user']
+        roles: ['user'],
       };
       const req = createMockRequest(user);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(true);
-      
+
       const result = await requireAuthAndRoles(req, res);
-      
+
       expect(result).toBe(true);
       expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['user']);
     });
@@ -208,16 +203,16 @@ describe('Authentication Middleware', () => {
       const user: JWTPayload = {
         userId: 1,
         email: 'admin@example.com',
-        roles: ['user', 'admin']
+        roles: ['user', 'admin'],
       };
       const req = createMockRequest(user);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(true);
-      
+
       const result = await requireAdmin(req, res);
-      
+
       expect(result).toBe(true);
       expect(requireAuthMock).toHaveBeenCalledWith(req, res);
       expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['admin']);
@@ -229,20 +224,20 @@ describe('Authentication Middleware', () => {
       vi.resetAllMocks();
       requireAuthMock.mockReset();
       requireRoleMock.mockReset();
-      
+
       const user: JWTPayload = {
         userId: 1,
         email: 'user@example.com',
-        roles: ['user']
+        roles: ['user'],
       };
       const req = createMockRequest(user);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(false);
-      
+
       const result = await requireAdmin(req, res);
-      
+
       expect(result).toBe(false);
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
@@ -256,14 +251,14 @@ describe('Authentication Middleware', () => {
       vi.resetAllMocks();
       requireAuthMock.mockReset();
       requireRoleMock.mockReset();
-      
+
       const req = createMockRequest();
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(false);
-      
+
       const result = await requireAdmin(req, res);
-      
+
       expect(result).toBe(false);
       expect(requireAuthMock).toHaveBeenCalledWith(req, res);
       expect(requireRoleMock).not.toHaveBeenCalled();
@@ -275,16 +270,16 @@ describe('Authentication Middleware', () => {
       const user: JWTPayload = {
         userId: 1,
         email: 'user@example.com',
-        roles: ['user']
+        roles: ['user'],
       };
       const req = createMockRequest(user);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(true);
-      
+
       const result = await requireUser(req, res);
-      
+
       expect(result).toBe(true);
       expect(requireAuthMock).toHaveBeenCalledWith(req, res);
       expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['user', 'admin']);
@@ -294,16 +289,16 @@ describe('Authentication Middleware', () => {
       const user: JWTPayload = {
         userId: 1,
         email: 'admin@example.com',
-        roles: ['user', 'admin']
+        roles: ['user', 'admin'],
       };
       const req = createMockRequest(user);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(true);
-      
+
       const result = await requireUser(req, res);
-      
+
       expect(result).toBe(true);
       expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['user', 'admin']);
     });
@@ -311,11 +306,11 @@ describe('Authentication Middleware', () => {
     it('should return false for unauthenticated requests', async () => {
       const req = createMockRequest();
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(false);
-      
+
       const result = await requireUser(req, res);
-      
+
       expect(result).toBe(false);
       expect(requireAuthMock).toHaveBeenCalledWith(req, res);
     });
@@ -325,9 +320,9 @@ describe('Authentication Middleware', () => {
     it('should handle authentication errors gracefully', async () => {
       const req = createMockRequest();
       const res = createMockResponse();
-      
+
       requireAuthMock.mockRejectedValue(new Error('Authentication error'));
-      
+
       await expect(requireAuthAndRoles(req, res, ['user'])).rejects.toThrow('Authentication error');
     });
 
@@ -337,20 +332,20 @@ describe('Authentication Middleware', () => {
       vi.resetAllMocks();
       requireAuthMock.mockReset();
       requireRoleMock.mockReset();
-      
+
       const user: JWTPayload = {
         userId: 1,
         email: 'user@example.com',
-        roles: ['user']
+        roles: ['user'],
       };
       const req = createMockRequest(user);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(false);
-      
+
       await requireAuthAndRoles(req, res, ['admin', 'moderator']);
-      
+
       expect(res.json).toHaveBeenCalledWith({
         error: 'Insufficient permissions. Required roles: admin, moderator',
       });
@@ -362,16 +357,16 @@ describe('Authentication Middleware', () => {
       const user: JWTPayload = {
         userId: 1,
         email: 'moderator@example.com',
-        roles: ['user', 'moderator']
+        roles: ['user', 'moderator'],
       };
       const req = createMockRequest(user);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(true);
-      
+
       const result = await requireAuthAndRoles(req, res, ['admin', 'moderator']);
-      
+
       expect(result).toBe(true);
       expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['admin', 'moderator']);
     });
@@ -380,16 +375,16 @@ describe('Authentication Middleware', () => {
       const superAdminUser: JWTPayload = {
         userId: 1,
         email: 'superadmin@example.com',
-        roles: ['user', 'admin', 'superadmin']
+        roles: ['user', 'admin', 'superadmin'],
       };
       const req = createMockRequest(superAdminUser);
       const res = createMockResponse();
-      
+
       requireAuthMock.mockResolvedValue(true);
       requireRoleMock.mockReturnValue(true);
-      
+
       const result = await requireAuthAndRoles(req, res, ['admin']);
-      
+
       expect(result).toBe(true);
       expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['admin']);
     });
