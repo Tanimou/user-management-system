@@ -1,6 +1,5 @@
 import type { VercelResponse } from '@vercel/node';
 import { logRoleChange, logStatusChange, logUserDeletion } from '../lib/audit-logger.js';
-import { hashPassword } from '../lib/auth.js';
 import {
   preventSelfDemotion,
   validateBody,

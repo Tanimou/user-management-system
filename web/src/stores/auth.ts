@@ -37,6 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
     const hasToken = !!token.value;
     const hasUser = !!user.value;
     console.log('Auth check:', { hasToken, hasUser, user: user.value });
+    // Both token and user must be present for authenticated state
     return hasToken && hasUser;
   });
 
@@ -194,23 +195,23 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
-    try {
-      // Optional: Call logout endpoint to clear refresh token
+    // Immediately clear local state first to prevent race conditions
+    const tokenToRevoke = token.value;
+    token.value = null;
+    user.value = null;
+    error.value = null;
+    localStorage.removeItem('accessToken');
+    sessionStorage.removeItem('accessToken');
+    localStorage.removeItem('rememberMe');
+
+    // Then try to call logout endpoint (optional)
+    if (tokenToRevoke) {
       try {
         await apiClient.post('/logout');
       } catch (error) {
-        // Ignore logout API errors
+        // Ignore logout API errors - local state is already cleared
+        console.warn('Logout API call failed:', error);
       }
-    } catch (error) {
-      // Even if logout fails, clear local state
-    } finally {
-      // Always clear local state
-      token.value = null;
-      user.value = null;
-      error.value = null;
-      localStorage.removeItem('accessToken');
-      sessionStorage.removeItem('accessToken');
-      localStorage.removeItem('rememberMe');
     }
   }
 

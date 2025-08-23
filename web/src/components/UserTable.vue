@@ -226,13 +226,24 @@ const columns = computed<DataTableColumns<User>>(() => {
       if (isAdmin) {
         buttons.push(
           h('n-button', {
-            size: 'tiny',
+            size: 'small',
             type: 'primary',
             ghost: true,
             onClick: () => handleEdit(row),
-            style: { marginRight: '6px', fontSize: '12px' }
+            style: { 
+              marginRight: '6px', 
+              fontSize: '12px',
+              cursor: 'pointer',
+              minHeight: '32px',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease',
+              border: '1px solid rgba(24, 160, 88, 0.3)',
+              color: 'rgba(24, 160, 88, 0.9)',
+              backgroundColor: 'transparent'
+            }
           }, [
-            h('n-icon', { style: { marginRight: '3px', fontSize: '12px' } }, [h(EditIcon)]),
+            h('n-icon', { style: { marginRight: '4px', fontSize: '14px' } }, [h(EditIcon)]),
             'Edit'
           ])
         );
@@ -243,33 +254,61 @@ const columns = computed<DataTableColumns<User>>(() => {
         if (row.isActive) {
           buttons.push(
             h('n-button', {
-              size: 'tiny',
+              size: 'small',
               type: 'error',
               ghost: true,
               onClick: () => handleDelete(row),
-              style: { fontSize: '12px' }
+              style: { 
+                fontSize: '12px',
+                cursor: 'pointer',
+                minHeight: '32px',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                transition: 'all 0.2s ease',
+                border: '1px solid rgba(208, 58, 82, 0.3)',
+                color: 'rgba(208, 58, 82, 0.9)',
+                backgroundColor: 'transparent'
+              }
             }, [
-              h('n-icon', { style: { marginRight: '0.1px', fontSize: '12px' } }, [h(DeleteIcon)]),
+              h('n-icon', { style: { marginRight: '4px', fontSize: '14px' } }, [h(DeleteIcon)]),
               'Delete'
             ])
           );
         } else {
           buttons.push(
             h('n-button', {
-              size: 'tiny',
+              size: 'small',
               type: 'success',
               ghost: true,
               onClick: () => handleRestore(row),
-              style: { fontSize: '12px' }
+              style: { 
+                fontSize: '12px',
+                cursor: 'pointer',
+                minHeight: '32px',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                transition: 'all 0.2s ease',
+                border: '1px solid rgba(24, 160, 88, 0.3)',
+                color: 'rgba(24, 160, 88, 0.9)',
+                backgroundColor: 'transparent'
+              }
             }, [
-              h('n-icon', { style: { marginRight: '0.1px', fontSize: '14px' } }, [h(RestoreIcon)]),
+              h('n-icon', { style: { marginRight: '4px', fontSize: '14px' } }, [h(RestoreIcon)]),
               'Restore'
             ])
           );
         }
       }
       
-      return h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } }, buttons);
+      return h('div', { 
+        style: { 
+          display: 'flex', 
+          gap: '8px', 
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '4px'
+        } 
+      }, buttons);
     },
   },
 ];
@@ -580,21 +619,89 @@ function handleRestore(user: User) {
 }
 
 /* Desktop Actions Button Styling */
+.desktop-table :deep(.n-data-table-td) .n-button {
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  min-height: 32px !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+
+/* Ensure the Actions column has proper width and centering */
+.desktop-table :deep(.n-data-table-th):last-child,
+.desktop-table :deep(.n-data-table-td):last-child {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
 .desktop-table :deep(.n-data-table-td) .n-button.n-button--ghost.n-button--primary-type {
-  --n-color-hover: rgba(24, 160, 88, 0.05);
-  --n-border-color: rgba(24, 160, 88, 0.3);
-  --n-text-color: rgba(24, 160, 88, 0.8);
+  --n-color: transparent;
+  --n-color-hover: rgba(24, 160, 88, 0.08) !important;
+  --n-color-pressed: rgba(24, 160, 88, 0.12) !important;
+  --n-color-focus: rgba(24, 160, 88, 0.08) !important;
+  --n-border-color: rgba(24, 160, 88, 0.3) !important;
+  --n-border-color-hover: rgba(24, 160, 88, 0.5) !important;
+  --n-border-color-pressed: rgba(24, 160, 88, 0.6) !important;
+  --n-border-color-focus: rgba(24, 160, 88, 0.5) !important;
+  --n-text-color: rgba(24, 160, 88, 0.9) !important;
+  --n-text-color-hover: rgba(24, 160, 88, 1) !important;
+  --n-text-color-pressed: rgba(24, 160, 88, 1) !important;
+  --n-text-color-focus: rgba(24, 160, 88, 1) !important;
+  border: 1px solid rgba(24, 160, 88, 0.3) !important;
 }
 
 .desktop-table :deep(.n-data-table-td) .n-button.n-button--ghost.n-button--error-type {
-  --n-color-hover: rgba(208, 58, 82, 0.05);
-  --n-border-color: rgba(208, 58, 82, 0.3);
-  --n-text-color: rgba(208, 58, 82, 0.8);
+  --n-color: transparent;
+  --n-color-hover: rgba(208, 58, 82, 0.08) !important;
+  --n-color-pressed: rgba(208, 58, 82, 0.12) !important;
+  --n-color-focus: rgba(208, 58, 82, 0.08) !important;
+  --n-border-color: rgba(208, 58, 82, 0.3) !important;
+  --n-border-color-hover: rgba(208, 58, 82, 0.5) !important;
+  --n-border-color-pressed: rgba(208, 58, 82, 0.6) !important;
+  --n-border-color-focus: rgba(208, 58, 82, 0.5) !important;
+  --n-text-color: rgba(208, 58, 82, 0.9) !important;
+  --n-text-color-hover: rgba(208, 58, 82, 1) !important;
+  --n-text-color-pressed: rgba(208, 58, 82, 1) !important;
+  --n-text-color-focus: rgba(208, 58, 82, 1) !important;
+  border: 1px solid rgba(208, 58, 82, 0.3) !important;
 }
 
 .desktop-table :deep(.n-data-table-td) .n-button.n-button--ghost.n-button--success-type {
-  --n-color-hover: rgba(24, 160, 88, 0.05);
-  --n-border-color: rgba(24, 160, 88, 0.3);
-  --n-text-color: rgba(24, 160, 88, 0.8);
+  --n-color: transparent;
+  --n-color-hover: rgba(24, 160, 88, 0.08) !important;
+  --n-color-pressed: rgba(24, 160, 88, 0.12) !important;
+  --n-color-focus: rgba(24, 160, 88, 0.08) !important;
+  --n-border-color: rgba(24, 160, 88, 0.3) !important;
+  --n-border-color-hover: rgba(24, 160, 88, 0.5) !important;
+  --n-border-color-pressed: rgba(24, 160, 88, 0.6) !important;
+  --n-border-color-focus: rgba(24, 160, 88, 0.5) !important;
+  --n-text-color: rgba(24, 160, 88, 0.9) !important;
+  --n-text-color-hover: rgba(24, 160, 88, 1) !important;
+  --n-text-color-pressed: rgba(24, 160, 88, 1) !important;
+  --n-text-color-focus: rgba(24, 160, 88, 1) !important;
+  border: 1px solid rgba(24, 160, 88, 0.3) !important;
+}
+
+/* Ensure icons have proper cursor and size */
+.desktop-table :deep(.n-data-table-td) .n-button .n-icon {
+  cursor: pointer !important;
+  font-size: 14px !important;
+}
+
+/* Add hover effect for entire button area */
+.desktop-table :deep(.n-data-table-td) .n-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Mobile view buttons already have proper styling, just ensure cursor */
+.mobile-cards .user-card-actions :deep(.n-button) {
+  cursor: pointer !important;
+}
+
+.mobile-cards .user-card-actions :deep(.n-button) .n-icon {
+  cursor: pointer !important;
 }
 </style>

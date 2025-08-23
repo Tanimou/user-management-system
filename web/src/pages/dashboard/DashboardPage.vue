@@ -234,7 +234,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, h } from 'vue';
+import { ref, computed, onMounted, watch, h, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
 import {
@@ -445,12 +445,22 @@ function handleViewFaq() {
 }
 
 // Methods - Menu Actions
-function handleUserMenuSelect(key: string) {
+async function handleUserMenuSelect(key: string) {
   if (key === 'profile') {
     router.push('/profile');
   } else if (key === 'logout') {
-    authStore.logout();
-    router.push('/login');
+    try {
+      // Clear auth state immediately
+      await authStore.logout();
+      // Wait for reactive updates to complete
+      await nextTick();
+      // Use replace instead of push to avoid back button issues
+      await router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if there's an error, still navigate to login
+      await router.replace('/login');
+    }
   }
 }
 
