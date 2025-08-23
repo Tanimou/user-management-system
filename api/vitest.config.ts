@@ -7,6 +7,13 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     testTimeout: 10000,
     hookTimeout: 10000,
+    isolate: true,
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
+    },
     env: {
       DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/user_management_test",
       JWT_ACCESS_SECRET: "test-jwt-access-secret-for-comprehensive-testing",
@@ -45,8 +52,8 @@ export default defineConfig({
       }
     },
     sequence: {
-      concurrent: true,
-      shuffle: true
+      concurrent: false,
+      shuffle: false
     }
   }
 });

@@ -1,26 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { VercelResponse } from '@vercel/node';
-import {
+
+// Create isolated mocks for each test run
+const requireAuthMock = vi.fn();
+const requireRoleMock = vi.fn();
+
+// Mock the auth utilities with isolated functions
+vi.mock('../../lib/auth', () => ({
+  requireAuth: requireAuthMock,
+  requireRole: requireRoleMock,
+}));
+
+// Import after mocking to ensure mock is applied
+const { 
   authenticateRequest,
   authorizeRoles,
   requireAuthAndRoles,
   requireAdmin,
-  requireUser,
-  type AuthenticatedRequest,
-  type JWTPayload
-} from '../../lib/middleware/auth';
+  requireUser
+} = await import('../../lib/middleware/auth');
 
-// Mock the auth utilities
-vi.mock('../../lib/auth', async () => {
-  const actual = await vi.importActual('../../lib/auth');
-  return {
-    ...actual,
-    requireAuth: vi.fn(),
-    requireRole: vi.fn(),
-  };
-});
-
-import { requireAuth, requireRole } from '../../lib/auth';
+import type { AuthenticatedRequest, JWTPayload } from '../../lib/middleware/auth';
 
 function createMockRequest(user?: JWTPayload, method: string = 'GET'): AuthenticatedRequest {
   return {
@@ -44,7 +44,11 @@ function createMockResponse(): VercelResponse {
 
 describe('Authentication Middleware', () => {
   beforeEach(() => {
+    // Clear all mocks and reset implementation to ensure clean state per test
     vi.clearAllMocks();
+    vi.resetAllMocks();
+    requireAuthMock.mockReset();
+    requireRoleMock.mockReset();
   });
 
   describe('authenticateRequest', () => {
@@ -52,24 +56,24 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest();
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
+      requireAuthMock.mockResolvedValue(true);
       
       const result = await authenticateRequest(req, res);
       
       expect(result).toBe(true);
-      expect(requireAuth).toHaveBeenCalledWith(req, res);
+      expect(requireAuthMock).toHaveBeenCalledWith(req, res);
     });
 
     it('should return false for invalid authentication', async () => {
       const req = createMockRequest();
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(false);
+      requireAuthMock.mockResolvedValue(false);
       
       const result = await authenticateRequest(req, res);
       
       expect(result).toBe(false);
-      expect(requireAuth).toHaveBeenCalledWith(req, res);
+      expect(requireAuthMock).toHaveBeenCalledWith(req, res);
     });
   });
 
@@ -81,12 +85,12 @@ describe('Authentication Middleware', () => {
         roles: ['user', 'admin']
       };
       
-      vi.mocked(requireRole).mockReturnValue(true);
+      requireRoleMock.mockReturnValue(true);
       
       const result = authorizeRoles(user, ['admin']);
       
       expect(result).toBe(true);
-      expect(requireRole).toHaveBeenCalledWith(user, ['admin']);
+      expect(requireRoleMock).toHaveBeenCalledWith(user, ['admin']);
     });
 
     it('should return false when user lacks required roles', () => {
@@ -96,21 +100,21 @@ describe('Authentication Middleware', () => {
         roles: ['user']
       };
       
-      vi.mocked(requireRole).mockReturnValue(false);
+      requireRoleMock.mockReturnValue(false);
       
       const result = authorizeRoles(user, ['admin']);
       
       expect(result).toBe(false);
-      expect(requireRole).toHaveBeenCalledWith(user, ['admin']);
+      expect(requireRoleMock).toHaveBeenCalledWith(user, ['admin']);
     });
 
     it('should handle undefined user', () => {
-      vi.mocked(requireRole).mockReturnValue(false);
+      requireRoleMock.mockReturnValue(false);
       
       const result = authorizeRoles(undefined, ['user']);
       
       expect(result).toBe(false);
-      expect(requireRole).toHaveBeenCalledWith(undefined, ['user']);
+      expect(requireRoleMock).toHaveBeenCalledWith(undefined, ['user']);
     });
   });
 
@@ -124,30 +128,42 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(user);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(true);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(true);
       
       const result = await requireAuthAndRoles(req, res, ['admin']);
       
       expect(result).toBe(true);
-      expect(requireAuth).toHaveBeenCalledWith(req, res);
-      expect(requireRole).toHaveBeenCalledWith(req.user, ['admin']);
+      expect(requireAuthMock).toHaveBeenCalledWith(req, res);
+      expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['admin']);
     });
 
     it('should return false if authentication fails', async () => {
+      // Ensure fresh mock state for this test
+      vi.clearAllMocks();
+      vi.resetAllMocks();
+      requireAuthMock.mockReset();
+      requireRoleMock.mockReset();
+      
       const req = createMockRequest();
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(false);
+      requireAuthMock.mockResolvedValue(false);
       
       const result = await requireAuthAndRoles(req, res, ['admin']);
       
       expect(result).toBe(false);
-      expect(requireAuth).toHaveBeenCalledWith(req, res);
-      expect(requireRole).not.toHaveBeenCalled();
+      expect(requireAuthMock).toHaveBeenCalledWith(req, res);
+      expect(requireRoleMock).not.toHaveBeenCalled();
     });
 
     it('should return false if authorization fails', async () => {
+      // Ensure fresh mock state for this test
+      vi.clearAllMocks();
+      vi.resetAllMocks();
+      requireAuthMock.mockReset();
+      requireRoleMock.mockReset();
+      
       const user: JWTPayload = {
         userId: 1,
         email: 'test@example.com',
@@ -156,8 +172,8 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(user);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(false);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(false);
       
       const result = await requireAuthAndRoles(req, res, ['admin']);
       
@@ -177,13 +193,13 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(user);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(true);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(true);
       
       const result = await requireAuthAndRoles(req, res);
       
       expect(result).toBe(true);
-      expect(requireRole).toHaveBeenCalledWith(req.user, ['user']);
+      expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['user']);
     });
   });
 
@@ -197,17 +213,23 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(user);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(true);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(true);
       
       const result = await requireAdmin(req, res);
       
       expect(result).toBe(true);
-      expect(requireAuth).toHaveBeenCalledWith(req, res);
-      expect(requireRole).toHaveBeenCalledWith(req.user, ['admin']);
+      expect(requireAuthMock).toHaveBeenCalledWith(req, res);
+      expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['admin']);
     });
 
     it('should return false for non-admin users', async () => {
+      // Ensure fresh mock state for this test
+      vi.clearAllMocks();
+      vi.resetAllMocks();
+      requireAuthMock.mockReset();
+      requireRoleMock.mockReset();
+      
       const user: JWTPayload = {
         userId: 1,
         email: 'user@example.com',
@@ -216,8 +238,8 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(user);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(false);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(false);
       
       const result = await requireAdmin(req, res);
       
@@ -229,16 +251,22 @@ describe('Authentication Middleware', () => {
     });
 
     it('should return false for unauthenticated requests', async () => {
+      // Ensure fresh mock state for this test
+      vi.clearAllMocks();
+      vi.resetAllMocks();
+      requireAuthMock.mockReset();
+      requireRoleMock.mockReset();
+      
       const req = createMockRequest();
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(false);
+      requireAuthMock.mockResolvedValue(false);
       
       const result = await requireAdmin(req, res);
       
       expect(result).toBe(false);
-      expect(requireAuth).toHaveBeenCalledWith(req, res);
-      expect(requireRole).not.toHaveBeenCalled();
+      expect(requireAuthMock).toHaveBeenCalledWith(req, res);
+      expect(requireRoleMock).not.toHaveBeenCalled();
     });
   });
 
@@ -252,14 +280,14 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(user);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(true);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(true);
       
       const result = await requireUser(req, res);
       
       expect(result).toBe(true);
-      expect(requireAuth).toHaveBeenCalledWith(req, res);
-      expect(requireRole).toHaveBeenCalledWith(req.user, ['user', 'admin']);
+      expect(requireAuthMock).toHaveBeenCalledWith(req, res);
+      expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['user', 'admin']);
     });
 
     it('should return true for admin users', async () => {
@@ -271,25 +299,25 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(user);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(true);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(true);
       
       const result = await requireUser(req, res);
       
       expect(result).toBe(true);
-      expect(requireRole).toHaveBeenCalledWith(req.user, ['user', 'admin']);
+      expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['user', 'admin']);
     });
 
     it('should return false for unauthenticated requests', async () => {
       const req = createMockRequest();
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(false);
+      requireAuthMock.mockResolvedValue(false);
       
       const result = await requireUser(req, res);
       
       expect(result).toBe(false);
-      expect(requireAuth).toHaveBeenCalledWith(req, res);
+      expect(requireAuthMock).toHaveBeenCalledWith(req, res);
     });
   });
 
@@ -298,12 +326,18 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest();
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockRejectedValue(new Error('Authentication error'));
+      requireAuthMock.mockRejectedValue(new Error('Authentication error'));
       
       await expect(requireAuthAndRoles(req, res, ['user'])).rejects.toThrow('Authentication error');
     });
 
     it('should provide clear error messages for insufficient permissions', async () => {
+      // Ensure fresh mock state for this test
+      vi.clearAllMocks();
+      vi.resetAllMocks();
+      requireAuthMock.mockReset();
+      requireRoleMock.mockReset();
+      
       const user: JWTPayload = {
         userId: 1,
         email: 'user@example.com',
@@ -312,8 +346,8 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(user);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(false);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(false);
       
       await requireAuthAndRoles(req, res, ['admin', 'moderator']);
       
@@ -333,13 +367,13 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(user);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(true);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(true);
       
       const result = await requireAuthAndRoles(req, res, ['admin', 'moderator']);
       
       expect(result).toBe(true);
-      expect(requireRole).toHaveBeenCalledWith(req.user, ['admin', 'moderator']);
+      expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['admin', 'moderator']);
     });
 
     it('should handle complex role hierarchies', async () => {
@@ -351,13 +385,13 @@ describe('Authentication Middleware', () => {
       const req = createMockRequest(superAdminUser);
       const res = createMockResponse();
       
-      vi.mocked(requireAuth).mockResolvedValue(true);
-      vi.mocked(requireRole).mockReturnValue(true);
+      requireAuthMock.mockResolvedValue(true);
+      requireRoleMock.mockReturnValue(true);
       
       const result = await requireAuthAndRoles(req, res, ['admin']);
       
       expect(result).toBe(true);
-      expect(requireRole).toHaveBeenCalledWith(req.user, ['admin']);
+      expect(requireRoleMock).toHaveBeenCalledWith(req.user, ['admin']);
     });
   });
 });
