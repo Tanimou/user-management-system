@@ -171,19 +171,28 @@ async function handleSave() {
     formData.append('avatar', selectedFile.value);
 
     // Upload to backend
-    const response = await apiClient.uploadFile<{ user: any; avatarUrl: string }>('/upload-avatar', formData);
+    const response = await apiClient.uploadFile<{ message: string; data: { user: any; avatarUrl: string } }>('/upload-avatar', formData);
     
-    if (response.data) {
+    if (response && response.data && response.data.avatarUrl) {
       const uploadedUrl = response.data.avatarUrl;
       emit('avatar-updated', uploadedUrl);
-      message.success('Profile photo updated successfully!');
+      message.success(response.message || 'Profile photo updated successfully!');
       visible.value = false;
       resetForm();
+    } else {
+      throw new Error('Invalid response from server');
     }
     
   } catch (error: any) {
     console.error('Avatar upload error:', error);
-    const errorMessage = error?.message || 'Failed to upload photo. Please try again.';
+    let errorMessage = 'Failed to upload photo. Please try again.';
+    
+    if (error.response && error.response.data && error.response.data.error) {
+      errorMessage = error.response.data.error;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     message.error(errorMessage);
   } finally {
     uploading.value = false;

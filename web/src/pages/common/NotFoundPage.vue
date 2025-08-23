@@ -26,4 +26,37 @@
   min-height: 100vh;
   padding: 2rem;
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .not-found-container {
+    padding: 1rem;
+  }
+  
+  .not-found-container :deep(.n-result .n-result-header) {
+    font-size: 18px;
+  }
+  
+  .not-found-container :deep(.n-result .n-result-description) {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .not-found-container {
+    padding: 0.5rem;
+  }
+  
+  .not-found-container :deep(.n-result .n-result-header) {
+    font-size: 16px;
+  }
+  
+  .not-found-container :deep(.n-result .n-result-description) {
+    font-size: 13px;
+  }
+  
+  .not-found-container :deep(.n-button) {
+    width: 100%;
+  }
+}
 </style>

@@ -176,7 +176,7 @@ class ApiClient {
   }
 
   // File upload method
-  async uploadFile<T>(url: string, formData: FormData, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async uploadFile<T>(url: string, formData: FormData, config?: AxiosRequestConfig): Promise<T> {
     const uploadConfig: AxiosRequestConfig = {
       ...config,
       headers: {
@@ -186,7 +186,7 @@ class ApiClient {
     };
     
     const response = await this.client.post<T>(url, formData, uploadConfig);
-    return response.data as ApiResponse<T>;
+    return response.data;
   }
 
   // Utility methods

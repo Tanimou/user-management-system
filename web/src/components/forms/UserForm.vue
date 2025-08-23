@@ -511,6 +511,22 @@ function handleConfirmationCancel() {
 }
 
 /* Responsive Design */
+@media (max-width: 768px) {
+  :deep(.n-form-item-label) {
+    font-size: 14px;
+  }
+  
+  :deep(.n-input-group) {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  :deep(.n-input-group .n-button) {
+    min-width: auto;
+    padding: 0 12px;
+  }
+}
+
 @media (max-width: 480px) {
   .form-actions {
     flex-direction: column;
@@ -519,6 +535,23 @@ function handleConfirmationCancel() {
   
   .form-actions :deep(.n-button) {
     width: 100%;
+  }
+  
+  :deep(.n-input-group) {
+    flex-direction: column;
+  }
+  
+  :deep(.n-input-group .n-input) {
+    width: 100% !important;
+  }
+  
+  :deep(.n-input-group .n-button) {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  :deep(.n-divider .n-divider__title) {
+    font-size: 13px;
   }
 }
 </style>

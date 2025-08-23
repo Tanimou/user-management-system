@@ -3,51 +3,75 @@
     <!-- Header -->
     <header class="dashboard-header">
       <nav class="main-nav">
-        <div class="nav-brand">User Management</div>
-        <div class="nav-items">
-          <router-link 
-            v-if="isAdmin" 
-            to="/users" 
-            class="nav-item"
-            :class="{ active: $route.path === '/users' }"
+        <div class="nav-brand">
+          <span class="brand-text">User Management</span>
+          <!-- Mobile menu toggle -->
+          <n-button 
+            class="mobile-menu-toggle"
+            text
+            size="large"
+            @click="mobileMenuOpen = !mobileMenuOpen"
           >
-            Users
-          </router-link>
-          <router-link 
-            to="/profile" 
-            class="nav-item"
-            :class="{ active: $route.path === '/profile' }"
-          >
-            Profile
-          </router-link>
+            <n-icon size="24">
+              <component :is="mobileMenuOpen ? CloseOutline : MenuOutline" />
+            </n-icon>
+          </n-button>
         </div>
-        <div class="user-menu">
-          <div class="user-info">
-            <n-avatar 
-              :size="32"
-              :src="user?.avatarUrl || defaultAvatar" 
-              :alt="user?.name"
-              round
-              class="user-avatar"
+        
+        <!-- Navigation Items - responsive -->
+        <div class="nav-content" :class="{ 'nav-content-open': mobileMenuOpen }">
+          <div class="nav-items">
+            <router-link 
+              v-if="isAdmin" 
+              to="/users" 
+              class="nav-item"
+              :class="{ active: $route.path === '/users' }"
+              @click="mobileMenuOpen = false"
             >
-              {{ user?.name?.charAt(0)?.toUpperCase() || 'U' }}
-            </n-avatar>
-            <span class="user-name">{{ user?.name || 'User' }}</span>
-            <n-tag 
-              :type="user?.roles?.includes('admin') ? 'success' : 'info'"
-              size="small"
-              class="role-badge"
+              <n-icon class="nav-icon"><People /></n-icon>
+              Users
+            </router-link>
+            <router-link 
+              to="/profile" 
+              class="nav-item"
+              :class="{ active: $route.path === '/profile' }"
+              @click="mobileMenuOpen = false"
             >
-              {{ user?.roles?.includes('admin') ? 'Admin' : 'User' }}
-            </n-tag>
+              <n-icon class="nav-icon"><Person /></n-icon>
+              Profile
+            </router-link>
           </div>
-          <n-dropdown :options="userMenuOptions" @select="handleUserMenuSelect">
-            <n-button text class="logout-btn">
-              <template #icon>
-                <n-icon><SettingsOutline /></n-icon>
-              </template>
-            </n-button>
-          </n-dropdown>
+          
+          <div class="user-menu">
+            <div class="user-info">
+              <n-avatar 
+                :size="32"
+                :src="user?.avatarUrl || defaultAvatar" 
+                :alt="user?.name"
+                round
+                class="user-avatar"
+              >
+                {{ user?.name?.charAt(0)?.toUpperCase() || 'U' }}
+              </n-avatar>
+              <div class="user-details">
+                <span class="user-name">{{ user?.name || 'User' }}</span>
+                <n-tag 
+                  :type="user?.roles?.includes('admin') ? 'success' : 'info'"
+                  size="small"
+                  class="role-badge"
+                >
+                  {{ user?.roles?.includes('admin') ? 'Admin' : 'User' }}
+                </n-tag>
+              </div>
+            </div>
+            <n-dropdown :options="userMenuOptions" @select="handleUserMenuSelect">
+              <n-button text class="menu-btn">
+                <template #icon>
+                  <n-icon><SettingsOutline /></n-icon>
+                </template>
+              </n-button>
+            </n-dropdown>
+          </div>
         </div>
       </nav>
     </header>
@@ -217,6 +241,10 @@ import {
   SettingsOutline,
   Add,
   Search,
+  MenuOutline,
+  CloseOutline,
+  People,
+  Person,
 } from '@vicons/ionicons5';
 
 import { useAuthStore, type User } from '@/stores/auth';
@@ -244,6 +272,7 @@ const searchQuery = ref('');
 const selectedRole = ref('all');
 const selectedStatus = ref('all');
 const showAddUserModal = ref(false);
+const mobileMenuOpen = ref(false);
 const showEditUserModal = ref(false);
 const showProfileModal = ref(false);
 const editingUser = ref<User | null>(null);
@@ -493,9 +522,33 @@ onMounted(() => {
 }
 
 .nav-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 20px;
   font-weight: 600;
   color: #333;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.brand-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  margin-left: 12px;
+}
+
+.nav-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  margin-left: 48px;
 }
 
 .nav-items {
@@ -504,12 +557,21 @@ onMounted(() => {
 }
 
 .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
   color: #666;
   font-weight: 500;
   padding: 8px 16px;
   border-radius: 6px;
   transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.nav-icon {
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .nav-item:hover {
@@ -534,23 +596,31 @@ onMounted(() => {
   gap: 12px;
 }
 
-.user-avatar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-weight: 600;
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .user-name {
   font-weight: 500;
   color: #333;
+  font-size: 14px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .role-badge {
   flex-shrink: 0;
 }
 
-.logout-btn {
+.menu-btn {
   color: #666;
+  padding: 6px;
+  border-radius: 6px;
 }
 
 /* Content Styles */

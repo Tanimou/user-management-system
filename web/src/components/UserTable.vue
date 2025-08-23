@@ -1,14 +1,122 @@
 <template>
-  <n-card>
-    <n-data-table
-      :columns="columns"
-      :data="users"
-      :loading="loading"
-      :pagination="false"
-      :bordered="false"
-      @update:sorter="handleSorterChange"
-    />
-  </n-card>
+  <div class="user-table-container">
+    <!-- Desktop/Tablet Table View -->
+    <n-card class="desktop-table">
+      <n-data-table
+        :columns="columns"
+        :data="users"
+        :loading="loading"
+        :pagination="false"
+        :bordered="false"
+        @update:sorter="handleSorterChange"
+      />
+    </n-card>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-cards">
+      <n-spin :show="loading" class="mobile-loading">
+        <div v-if="users.length === 0" class="no-users">
+          <n-empty description="No users found" />
+        </div>
+        <div v-else class="user-cards-grid">
+          <n-card 
+            v-for="user in users" 
+            :key="user.id" 
+            class="user-card"
+            hoverable
+          >
+            <div class="user-card-header">
+              <div class="user-avatar-section">
+                <n-avatar 
+                  :size="40"
+                  :src="user.avatarUrl"
+                  round
+                  class="user-avatar"
+                >
+                  {{ user.name?.charAt(0)?.toUpperCase() || 'U' }}
+                </n-avatar>
+                <div class="user-basic-info">
+                  <h3 class="user-name">{{ user.name }}</h3>
+                  <p class="user-email">{{ user.email }}</p>
+                </div>
+              </div>
+              <n-tag 
+                :type="user.isActive ? 'success' : 'error'"
+                size="small"
+              >
+                {{ user.isActive ? 'Active' : 'Inactive' }}
+              </n-tag>
+            </div>
+            
+            <div class="user-card-body">
+              <div class="user-detail">
+                <span class="label">ID:</span>
+                <span class="value">{{ user.id }}</span>
+              </div>
+              <div class="user-detail">
+                <span class="label">Roles:</span>
+                <span class="value">
+                  <n-tag 
+                    v-for="role in user.roles" 
+                    :key="role"
+                    :type="role === 'admin' ? 'success' : 'info'"
+                    size="tiny"
+                    class="role-tag"
+                  >
+                    {{ role }}
+                  </n-tag>
+                </span>
+              </div>
+              <div class="user-detail">
+                <span class="label">Created:</span>
+                <span class="value">{{ new Date(user.createdAt).toLocaleDateString() }}</span>
+              </div>
+              <div class="user-detail">
+                <span class="label">Updated:</span>
+                <span class="value">{{ user.updatedAt ? new Date(user.updatedAt).toLocaleDateString() : 'Never' }}</span>
+              </div>
+              <div v-if="showDeletedColumn && user.deletedAt" class="user-detail">
+                <span class="label">Deleted:</span>
+                <span class="value">{{ new Date(user.deletedAt).toLocaleDateString() }}</span>
+              </div>
+            </div>
+
+            <div class="user-card-actions">
+              <n-space size="small">
+                <n-button
+                  v-if="authStore.isAdmin"
+                  size="small"
+                  type="primary"
+                  ghost
+                  @click="handleEdit(user)"
+                >
+                  <template #icon>
+                    <n-icon><EditIcon /></n-icon>
+                  </template>
+                  Edit
+                </n-button>
+                <n-button
+                  v-if="authStore.isAdmin && user.id !== authStore.user?.id"
+                  size="small"
+                  :type="user.isActive ? 'error' : 'success'"
+                  ghost
+                  @click="user.isActive ? handleDelete(user) : handleRestore(user)"
+                >
+                  <template #icon>
+                    <n-icon>
+                      <DeleteIcon v-if="user.isActive" />
+                      <RestoreIcon v-else />
+                    </n-icon>
+                  </template>
+                  {{ user.isActive ? 'Delete' : 'Restore' }}
+                </n-button>
+              </n-space>
+            </div>
+          </n-card>
+        </div>
+      </n-spin>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -44,11 +152,18 @@ const emit = defineEmits<Emits>();
 
 const authStore = useAuthStore();
 
-// Remove pagination reactive computed since pagination is now handled separately
-// const paginationReactive = computed(() => ({...})); // REMOVED
+// Debug: log admin status
+console.log('UserTable - authStore.user:', authStore.user);
+console.log('UserTable - authStore.isAdmin:', authStore.isAdmin);
 
 // Table columns
-const columns = computed<DataTableColumns<User>>(() => [
+const columns = computed<DataTableColumns<User>>(() => {
+  const isAdmin = authStore.isAdmin;
+  const currentUserId = authStore.user?.id;
+  
+  console.log('UserTable columns computed - isAdmin:', isAdmin, 'currentUserId:', currentUserId);
+  
+  return [
   { title: 'ID', key: 'id', width: 80 },
   { 
     title: 'Name', 
@@ -109,34 +224,54 @@ const columns = computed<DataTableColumns<User>>(() => [
   {
     title: 'Actions',
     key: 'actions',
-    width: 150,
-    render: (row) => h('div', { style: 'display: flex; gap: 8px;' }, [
-      // Edit button - admin only
-      authStore.isAdmin ? h('n-button', {
-        size: 'small',
-        type: 'primary',
-        ghost: true,
-        onClick: () => handleEdit(row),
-      }, { default: () => h('n-icon', null, { default: () => h(EditIcon) }) }) : null,
+    width: 180,
+    render: (row) => {
+      console.log('Actions render for user:', row.id, 'isAdmin:', isAdmin, 'currentUserId:', currentUserId);
       
-      // Delete/Restore buttons - admin only, cannot affect self
-      authStore.isAdmin && row.id !== authStore.user?.id ? (
-        row.isActive ? h('n-button', {
+      return h('div', { style: 'display: flex; gap: 8px; align-items: center;' }, [
+        // Edit button - admin only
+        isAdmin ? h('n-button', {
           size: 'small',
-          type: 'error',
+          type: 'primary',
           ghost: true,
-          onClick: () => handleDelete(row),
-        }, { default: () => h('n-icon', null, { default: () => h(DeleteIcon) }) }) 
-        : h('n-button', {
-          size: 'small',
-          type: 'success',
-          ghost: true,
-          onClick: () => handleRestore(row),
-        }, { default: () => h('n-icon', null, { default: () => h(RestoreIcon) }) })
-      ) : null,
-    ]),
+          onClick: () => handleEdit(row),
+        }, {
+          default: () => [
+            h('n-icon', { style: 'margin-right: 4px;' }, { default: () => h(EditIcon) }),
+            'Edit'
+          ]
+        }) : null,
+        
+        // Delete/Restore buttons - admin only, cannot affect self
+        isAdmin && row.id !== currentUserId ? (
+          row.isActive ? h('n-button', {
+            size: 'small',
+            type: 'error',
+            ghost: true,
+            onClick: () => handleDelete(row),
+          }, {
+            default: () => [
+              h('n-icon', { style: 'margin-right: 4px;' }, { default: () => h(DeleteIcon) }),
+              'Delete'
+            ]
+          }) 
+          : h('n-button', {
+            size: 'small',
+            type: 'success',
+            ghost: true,
+            onClick: () => handleRestore(row),
+          }, {
+            default: () => [
+              h('n-icon', { style: 'margin-right: 4px;' }, { default: () => h(RestoreIcon) }),
+              'Restore'
+            ]
+          })
+        ) : null,
+      ]);
+    },
   },
-]);
+];
+});
 
 // Methods - remove pagination handling as it's now external
 function handleSorterChange(sorterInfo: any) {
@@ -157,46 +292,288 @@ function handleRestore(user: User) {
 </script>
 
 <style scoped>
-/* UserTable responsive design */
-:deep(.n-data-table) {
-  /* Enable horizontal scroll on mobile */
-  min-width: 600px;
+.user-table-container {
+  position: relative;
 }
 
-:deep(.n-data-table-wrapper) {
+/* Desktop/Tablet View */
+.desktop-table {
+  display: block;
+}
+
+.mobile-cards {
+  display: none;
+}
+
+/* Enable horizontal scroll on desktop for very wide tables */
+.desktop-table :deep(.n-data-table) {
+  min-width: 800px;
+}
+
+.desktop-table :deep(.n-data-table-wrapper) {
   overflow-x: auto;
 }
 
-/* Mobile optimizations */
-@media (max-width: 768px) {
-  :deep(.n-data-table) {
+/* Mobile Loading */
+.mobile-loading {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-users {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+/* Mobile Card Layout */
+.user-cards-grid {
+  display: grid;
+  gap: 16px;
+  padding: 4px;
+}
+
+.user-card {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.user-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.user-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-basic-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-email {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-color-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-card-body {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.user-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-detail .label {
+  font-size: 12px;
+  color: var(--text-color-3);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.user-detail .value {
+  font-size: 13px;
+  color: var(--text-color-1);
+  text-align: right;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-tag {
+  margin-left: 4px;
+}
+
+.role-tag:first-child {
+  margin-left: 0;
+}
+
+.user-card-actions {
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1200px) {
+  .desktop-table :deep(.n-data-table) {
+    font-size: 13px;
+  }
+  
+  .desktop-table :deep(.n-data-table-td),
+  .desktop-table :deep(.n-data-table-th) {
+    padding: 8px 6px;
+  }
+}
+
+@media (max-width: 900px) {
+  .desktop-table :deep(.n-data-table) {
     font-size: 12px;
   }
   
-  :deep(.n-data-table-td) {
-    padding: 8px 4px;
+  .desktop-table :deep(.n-data-table-td),
+  .desktop-table :deep(.n-data-table-th) {
+    padding: 6px 4px;
   }
   
-  :deep(.n-data-table-th) {
-    padding: 8px 4px;
+  .desktop-table :deep(.n-button) {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+}
+
+/* Switch to mobile view */
+@media (max-width: 768px) {
+  .desktop-table {
+    display: none;
   }
   
-  :deep(.n-button) {
-    padding: 4px 8px;
+  .mobile-cards {
+    display: block;
+  }
+  
+  .user-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 
 @media (max-width: 480px) {
-  :deep(.n-data-table) {
+  .user-card {
+    border-radius: 8px;
+  }
+  
+  .user-card-header {
+    margin-bottom: 12px;
+  }
+  
+  .user-avatar-section {
+    gap: 8px;
+  }
+  
+  .user-name {
+    font-size: 15px;
+  }
+  
+  .user-email {
+    font-size: 12px;
+  }
+  
+  .user-card-body {
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  
+  .user-detail .label {
     font-size: 11px;
   }
   
-  :deep(.n-data-table-td) {
-    padding: 6px 2px;
+  .user-detail .value {
+    font-size: 12px;
   }
   
-  :deep(.n-data-table-th) {
-    padding: 6px 2px;
+  .user-card-actions {
+    padding-top: 8px;
+  }
+  
+  .user-card-actions :deep(.n-button) {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+  
+  .user-cards-grid {
+    gap: 8px;
+    padding: 2px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .user-avatar-section :deep(.n-avatar) {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .user-name {
+    font-size: 14px;
+  }
+  
+  .user-email {
+    font-size: 11px;
+  }
+  
+  .user-card-actions :deep(.n-space) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .user-card-actions :deep(.n-button) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .user-card {
+    border: 2px solid var(--border-color);
+  }
+  
+  .user-card-actions {
+    border-top: 2px solid var(--border-color);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .user-card {
+    transition: none;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .user-card-actions :deep(.n-button) {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+  
+  .user-card {
+    padding: 16px;
   }
 }
 </style>
