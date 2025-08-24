@@ -54,7 +54,7 @@ vi.mock('../lib/rate-limiter', () => ({
 }));
 
 // Import after mocking
-import handler from '../login';
+import handler from '../handlers/login';
 import prisma from '../lib/prisma';
 const { verifyPassword } = await import('../lib/auth');
 const { createAuthRateLimit, recordAuthSuccess, recordAuthFailure } = await import('../lib/rate-limiter');

@@ -2,8 +2,14 @@
   "version": 2,
   "buildCommand": "cd web && npm run build",
   "outputDirectory": "web/dist",
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
   "functions": {
-    "api/**/*.ts": {
+    "api/index.ts": {
       "maxDuration": 10
     }
   },
@@ -75,6 +81,12 @@
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.ts"
     }
   ],
   "redirects": [
