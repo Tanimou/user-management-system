@@ -9,8 +9,8 @@ import {
   withCORS,
   withErrorHandling,
   type AuthenticatedRequest,
-} from './lib/middleware/index.js';
-import prisma, { USER_SELECT_FIELDS } from './lib/prisma.js';
+} from '../lib/middleware/index.js';
+import prisma, { USER_SELECT_FIELDS } from '../lib/prisma.js';
 
 // Allowed image types
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];

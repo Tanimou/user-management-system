@@ -4,8 +4,8 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCORSHeaders, setSecurityHeaders, requireAuth, type AuthenticatedRequest } from './lib/auth.js';
-import { getAvailableRoles } from './lib/role-validation.js';
+import { setCORSHeaders, setSecurityHeaders, requireAuth, type AuthenticatedRequest } from '../lib/auth.js';
+import { getAvailableRoles } from '../lib/role-validation.js';
 
 /**
  * Authorization matrix for different resources

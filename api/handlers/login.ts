@@ -7,10 +7,10 @@ import {
   signRefreshToken,
   verifyPassword,
   type JWTPayload,
-} from './lib/auth.js';
-import prisma, { USER_AUTH_SELECT_FIELDS } from "./lib/prisma.js";
-import { createAuthRateLimit, recordAuthFailure, recordAuthSuccess } from './lib/rate-limiter.js';
-import { validatePasswordPolicy } from './lib/validation.js';
+} from '../lib/auth.js';
+import prisma, { USER_AUTH_SELECT_FIELDS } from "../lib/prisma.js";
+import { createAuthRateLimit, recordAuthFailure, recordAuthSuccess } from '../lib/rate-limiter.js';
+import { validatePasswordPolicy } from '../lib/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers

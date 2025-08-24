@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCORSHeaders, setSecurityHeaders, requireAuth, AuthenticatedRequest } from './lib/auth.js';
-import DatabaseMonitor from './lib/db-monitoring.js';
+import { setCORSHeaders, setSecurityHeaders, requireAuth, AuthenticatedRequest } from '../lib/auth.js';
+import DatabaseMonitor from '../lib/db-monitoring.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers

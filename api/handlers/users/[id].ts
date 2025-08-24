@@ -1,5 +1,5 @@
 import type { VercelResponse } from '@vercel/node';
-import { logRoleChange, logStatusChange, logUserDeletion } from '../lib/audit-logger.js';
+import { logRoleChange, logStatusChange, logUserDeletion } from '../../lib/audit-logger.js';
 import {
   preventSelfDemotion,
   validateBody,
@@ -10,9 +10,9 @@ import {
   withErrorHandling,
   withSelfOrAdmin,
   type AuthenticatedRequest,
-} from '../lib/middleware/index.js';
-import prisma from '../lib/prisma.js';
-import { updateUserSchema, userIdSchema } from '../lib/schemas/user.js';
+} from '../../lib/middleware/index.js';
+import prisma from '../../lib/prisma.js';
+import { updateUserSchema, userIdSchema } from '../../lib/schemas/user.js';
 
 // GET /api/users/[id] - Get user by ID (self or admin)
 const getUserHandler = withCORS(

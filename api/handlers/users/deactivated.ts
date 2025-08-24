@@ -6,9 +6,9 @@ import {
   withAdminRole,
   validateQuery,
   type AuthenticatedRequest 
-} from '../lib/middleware/index.js';
-import prisma from '../lib/prisma.js';
-import { getUsersSchema } from '../lib/schemas/user.js';
+} from '../../lib/middleware/index.js';
+import prisma from '../../lib/prisma.js';
+import { getUsersSchema } from '../../lib/schemas/user.js';
 
 // GET /api/users/deactivated - List deactivated users (admin only)
 const getDeactivatedUsersHandler = withCORS(

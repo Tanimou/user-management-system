@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCORSHeaders, setSecurityHeaders } from './lib/auth.js';
-import { calculatePasswordStrength } from './lib/validation.js';
+import { setCORSHeaders, setSecurityHeaders } from '../lib/auth.js';
+import { calculatePasswordStrength } from '../lib/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers
