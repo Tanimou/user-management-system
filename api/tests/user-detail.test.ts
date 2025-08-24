@@ -100,7 +100,7 @@ vi.mock('../lib/middleware/index', () => ({
 }));
 
 // Now import the handler and other dependencies
-import handler from '../users/[id]';
+import handler from '../handlers/users/[id]';
 import prisma from '../lib/prisma';
 
 // Create test utilities

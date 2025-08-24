@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import handler from '../health.js';
+import handler from '../handlers/health.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Mock the auth module  

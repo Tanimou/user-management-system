@@ -56,7 +56,7 @@ vi.mock('../../lib/rate-limiter', () => ({
   recordAuthFailure: vi.fn(),
 }));
 
-import handler from '../../login';
+import handler from '../../handlers/login';
 import prisma from '../../lib/prisma';
 import { 
   setCORSHeaders, 

@@ -49,7 +49,7 @@ vi.mock('../lib/rate-limiter', () => ({
 }));
 
 // Import after mocking
-import handler from '../refresh';
+import handler from '../handlers/refresh';
 import prisma from '../lib/prisma';
 const { 
   verifyRefreshToken, 

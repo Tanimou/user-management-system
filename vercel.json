@@ -2,12 +2,6 @@
   "version": 2,
   "buildCommand": "cd web && npm run build",
   "outputDirectory": "web/dist",
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
-    }
-  ],
   "functions": {
     "api/index.ts": {
       "maxDuration": 10
@@ -83,12 +77,6 @@
       ]
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.ts"
-    }
-  ],
   "redirects": [
     {
       "source": "/admin",
@@ -104,6 +92,10 @@
     {
       "source": "/((?!api).*)",
       "destination": "/web/dist/$1"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.ts"
     }
   ]
 }

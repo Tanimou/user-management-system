@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import handler from '../users/deactivated.ts';
+import handler from '../handlers/users/deactivated.ts';
 import { requireAuth, requireRole } from '../lib/auth.js';
 import prisma from '../lib/prisma.js';
 import { createMockRequest, createMockResponse, createMockUser } from './utils/mocks.ts';

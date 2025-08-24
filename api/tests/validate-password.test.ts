@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMockRequest, createMockResponse } from './utils/mocks';
-import handler from '../validate-password';
+import handler from '../handlers/validate-password';
 
 describe('Password Validation Endpoint', () => {
   it('should validate strong password successfully', async () => {

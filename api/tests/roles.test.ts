@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import handler from '../roles';
+import handler from '../handlers/roles';
 import { createMockRequest, createMockResponse } from './utils/mocks';
 
 // Mock the auth utilities

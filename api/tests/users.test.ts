@@ -101,7 +101,7 @@ vi.mock('../lib/middleware/index', async () => {
 
 import { hashPassword, requireAuth, requireRole } from '../lib/auth';
 import prisma from '../lib/prisma';
-import handler from '../users/index';
+import handler from '../handlers/users/index';
 import jwt from 'jsonwebtoken';
 import { verifyToken } from '../lib/middleware/enhanced-auth';
 

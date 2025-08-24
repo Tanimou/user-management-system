@@ -84,7 +84,7 @@ vi.mock('../lib/middleware/index', async () => {
   };
 });
 
-import handler from '../me';
+import handler from '../handlers/me';
 import prisma from '../lib/prisma';
 import { requireAuth, hashPassword } from '../lib/auth';
 import jwt from 'jsonwebtoken';
