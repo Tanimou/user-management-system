@@ -54,9 +54,17 @@ export const updateUserSchema = Joi.object({
     }),
   roles: Joi.array().items(Joi.string().valid('user', 'admin')).min(1),
   isActive: Joi.boolean(),
-  avatarUrl: Joi.string().uri().max(500).allow(null, '').optional()
+  // Avatar URL can be either an absolute HTTP(S) URL (e.g. from blob storage) OR
+  // a relative local development path such as /uploads/avatars/<filename>. We relax
+  // the strict uri() requirement to support the local storage workflow implemented
+  // by the /upload-avatar endpoint which returns a relative path in dev.
+  avatarUrl: Joi.string()
+    .max(500)
+    .allow(null, '')
+    .optional()
+    .pattern(/^(https?:\/\/[^\s]+|\/uploads\/[^\s]+)$/)
     .messages({
-      'string.uri': 'Avatar URL must be a valid URL'
+      'string.pattern.base': 'Avatar URL must be an absolute http(s) URL or a /uploads/ path'
     })
 }).min(1);
 

@@ -231,13 +231,31 @@ export const useAuthStore = defineStore('auth', () => {
       // API returns { data: userObject }, axios client returns this raw response
       const response = await apiClient.get<User>('/me');
       console.log('🔄 fetchProfile raw response:', response);
-  // Extract user from the data field (response.data.user expected)
-  const fetchedUser = (response as any).data?.user ?? (response as any).data ?? null;
-  console.log('🔄 Extracted user from fetch:', fetchedUser);
-      
-  user.value = fetchedUser;
+      // Normalize possible response shapes:
+      // { data: user }, { message, data: user }, user
+      const raw: any = response;
+      let fetchedUser = null as any;
+      if (raw?.data && raw.data.id) {
+        fetchedUser = raw.data; // { data: user }
+      } else if (raw?.data?.data && raw.data.data.id) {
+        fetchedUser = raw.data.data; // { data: { data: user } } unlikely but defensive
+      } else if (raw?.id) {
+        fetchedUser = raw; // raw user object
+      } else if (raw?.user && raw.user.id) {
+        fetchedUser = raw.user; // { user: user }
+      } else {
+        // Attempt deeper search
+        fetchedUser = raw?.data?.user ?? null;
+      }
+      console.log('🔄 Normalized fetched user:', fetchedUser);
+
+      if (fetchedUser && fetchedUser.avatarUrl) {
+        const base = fetchedUser.avatarUrl.split('?')[0];
+        fetchedUser.avatarUrl = `${base}?t=${Date.now()}`;
+      }
+      user.value = fetchedUser;
       console.log('🔄 User value after fetch:', user.value);
-      
+
       return user.value;
     } catch (error) {
       console.error('❌ fetchProfile error:', error);
@@ -253,22 +271,34 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       console.log('🔄 updateProfile called with data:', data);
       console.log('🔄 Current user before update:', user.value);
-      
+
       // API returns { message: "...", data: userObject }, axios client returns this raw response
-      const response = await apiClient.put<User>(
-        '/me',
-        data
-      );
-      
+      const response = await apiClient.put<User>('/me', data);
+
       console.log('🔄 updateProfile raw response:', response);
-      
-  // Extract user from the data field (response.data.user expected)
-  const updatedUser = (response as any).data?.user ?? (response as any).data ?? null;
-      console.log('🔄 Extracted updated user:', updatedUser);
-      
+
+      const raw: any = response;
+      let updatedUser: any = null;
+      if (raw?.data && raw.data.id) {
+        updatedUser = raw.data;
+      } else if (raw?.data?.data && raw.data.data.id) {
+        updatedUser = raw.data.data;
+      } else if (raw?.id) {
+        updatedUser = raw;
+      } else if (raw?.user && raw.user.id) {
+        updatedUser = raw.user;
+      } else {
+        updatedUser = raw?.data?.user ?? null;
+      }
+      console.log('🔄 Normalized updated user:', updatedUser);
+
+      if (updatedUser && updatedUser.avatarUrl) {
+        const base = updatedUser.avatarUrl.split('?')[0];
+        updatedUser.avatarUrl = `${base}?t=${Date.now()}`;
+      }
       user.value = updatedUser;
       console.log('🔄 User value after update:', user.value);
-      
+
       return { success: true };
     } catch (error: any) {
       console.error('❌ updateProfile error:', error);
@@ -310,6 +340,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   function updateUser(userData: Partial<User>) {
     if (user.value) {
+      // If avatarUrl updated, append cache-busting param to ensure UI refresh
+      if (userData.avatarUrl) {
+        const separator = userData.avatarUrl.includes('?') ? '&' : '?';
+        userData.avatarUrl = `${userData.avatarUrl}${separator}t=${Date.now()}`;
+      }
       user.value = { ...user.value, ...userData };
     }
   }

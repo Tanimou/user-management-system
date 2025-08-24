@@ -275,12 +275,14 @@ const formData = reactive({
   currentPassword: '',
   newPassword: '',
   confirmPassword: '',
+  avatarUrl: ''
 });
 
 // Original form data for change detection
 const originalFormData = ref({
   name: '',
-  email: ''
+  email: '',
+  avatarUrl: ''
 });
 
 // Form validation rules
@@ -334,7 +336,8 @@ const show = computed({
 const hasChanges = computed(() => {
   const nameChanged = formData.name !== originalFormData.value.name;
   const passwordChanging = formData.currentPassword && formData.newPassword && formData.confirmPassword;
-  return nameChanged || passwordChanging;
+  const avatarChanged = formData.avatarUrl !== originalFormData.value.avatarUrl;
+  return nameChanged || passwordChanging || avatarChanged;
 });
 
 // Methods
@@ -345,11 +348,13 @@ function resetForm() {
   formData.currentPassword = '';
   formData.newPassword = '';
   formData.confirmPassword = '';
+  formData.avatarUrl = user?.avatarUrl || '';
   
   // Store original data for change detection
   originalFormData.value = {
     name: user?.name || '',
-    email: user?.email || ''
+    email: user?.email || '',
+    avatarUrl: user?.avatarUrl || ''
   };
   
   // Reset password form visibility
@@ -385,6 +390,12 @@ async function handleSubmit() {
       console.log('🔄 Password change requested');
     }
 
+    // Include avatarUrl if changed
+    if (formData.avatarUrl !== originalFormData.value.avatarUrl) {
+      updateData.avatarUrl = formData.avatarUrl;
+      console.log('🔄 Avatar changed:', formData.avatarUrl);
+    }
+
     console.log('🔄 Update data to send:', updateData);
 
     // Don't make request if nothing to update
@@ -402,6 +413,13 @@ async function handleSubmit() {
       console.log('🔄 Emitting updated event');
       emit('updated');
       show.value = false;
+
+      // Sync originals after successful save
+      originalFormData.value = {
+        name: formData.name,
+        email: formData.email,
+        avatarUrl: formData.avatarUrl
+      };
     } else {
       message.error(result.message || 'Failed to update profile');
     }
@@ -456,9 +474,12 @@ async function loadRecentActivity() {
 
 // Handle avatar update
 function handleAvatarUpdated(avatarUrl: string) {
-  // In a real implementation, this would save to backend
-  // For now, we'll just update the auth store
+  // Update local form state & auth store
   authStore.updateUser({ avatarUrl });
+  formData.avatarUrl = avatarUrl;
+  // Don't update originalFormData here so Save button enables (user can confirm)
+  // Emit updated immediately so outer components (e.g., dashboard header) refresh avatar
+  emit('updated');
   showAvatarUpload.value = false;
 }
 
