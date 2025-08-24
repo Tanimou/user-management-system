@@ -3,7 +3,7 @@
   "buildCommand": "cd web && npm run build",
   "outputDirectory": "web/dist",
   "functions": {
-    "api/**/*.ts": {
+    "api/index.ts": {
       "maxDuration": 10
     }
   },
@@ -92,6 +92,10 @@
     {
       "source": "/((?!api).*)",
       "destination": "/web/dist/$1"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.ts"
     }
   ]
 }

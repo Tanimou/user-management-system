@@ -1,0 +1,20 @@
+# Exclude test files and development artifacts  
+tests/
+scripts/
+
+# Exclude debug and temporary files
+debug-*
+Copilot-Processing.md
+check-db.mjs
+*.log
+
+# Exclude test files
+**/*.test.*
+**/*.spec.*
+test-results/
+e2e-results/
+playwright-report/
+
+# Exclude development and temp files
+.env.test
+.env.development.local

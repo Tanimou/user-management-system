@@ -10,7 +10,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
-    "db:seed": "tsx scripts/seed.ts",
+    "db:seed": "tsx ../scripts/scripts/seed.ts",
     "db:performance": "tsx scripts/performance-test.ts",
     "db:update-admin-password": "tsx scripts/update-admin-password.ts",
     "test:admin-password-api": "tsx scripts/test-admin-password-api.ts",

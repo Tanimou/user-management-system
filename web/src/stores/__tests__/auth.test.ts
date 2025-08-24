@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { setActivePinia, createPinia } from 'pinia';
-import { useAuthStore } from '../auth';
+import { createPinia, setActivePinia } from 'pinia';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import apiClient from '../../api/axios';
+import { useAuthStore } from '../auth';
 
 // Mock the API client
 vi.mock('../../api/axios');
@@ -37,11 +37,11 @@ describe('Auth Store', () => {
 
     it('should restore token from localStorage on initialization', () => {
       localStorageMock.getItem.mockReturnValue('stored-token');
-      
+
       // Create a new store instance to trigger initialization
       setActivePinia(createPinia());
       const newStore = useAuthStore();
-      
+
       expect(localStorageMock.getItem).toHaveBeenCalledWith('accessToken');
       expect(newStore.token).toBe('stored-token');
     });
@@ -59,15 +59,15 @@ describe('Auth Store', () => {
             email: 'test@example.com',
             roles: ['user'],
             isActive: true,
-          }
-        }
+          },
+        },
       };
 
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
       const loginData = {
         email: 'test@example.com',
-        password: 'password123'
+        password: 'password123',
       };
 
       await authStore.login(loginData);
@@ -77,7 +77,10 @@ describe('Auth Store', () => {
       expect(authStore.token).toBe('jwt-token-123');
       expect(authStore.isAuthenticated).toBe(true);
       expect(authStore.error).toBeNull();
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'jwt-token-123');
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        'accessToken',
+        'jwt-token-123'
+      );
     });
 
     it('should handle login failure', async () => {
@@ -85,16 +88,16 @@ describe('Auth Store', () => {
         response: {
           data: {
             error: 'Invalid credentials',
-            code: 'INVALID_CREDENTIALS'
-          }
-        }
+            code: 'INVALID_CREDENTIALS',
+          },
+        },
       };
 
       vi.mocked(apiClient.post).mockRejectedValue(mockError);
 
       const loginData = {
         email: 'test@example.com',
-        password: 'wrongpassword'
+        password: 'wrongpassword',
       };
 
       await expect(authStore.login(loginData)).rejects.toThrow();
@@ -107,13 +110,14 @@ describe('Auth Store', () => {
     });
 
     it('should show loading state during login', async () => {
-      vi.mocked(apiClient.post).mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve({ data: {} }), 100))
+      vi.mocked(apiClient.post).mockImplementation(
+        () =>
+          new Promise(resolve => setTimeout(() => resolve({ data: {} }), 100))
       );
 
       const loginPromise = authStore.login({
         email: 'test@example.com',
-        password: 'password123'
+        password: 'password123',
       });
 
       // Check loading state
@@ -129,11 +133,11 @@ describe('Auth Store', () => {
 
       const loginData = {
         email: 'test@example.com',
-        password: 'password123'
+        password: 'password123',
       };
 
       await expect(authStore.login(loginData)).rejects.toThrow('Network Error');
-      
+
       expect(authStore.error).toBe('Network error occurred');
       expect(authStore.isAuthenticated).toBe(false);
     });
@@ -191,8 +195,8 @@ describe('Auth Store', () => {
       const mockResponse = {
         data: {
           success: true,
-          token: 'new-jwt-token-456'
-        }
+          token: 'new-jwt-token-456',
+        },
       };
 
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
@@ -201,7 +205,10 @@ describe('Auth Store', () => {
 
       expect(apiClient.post).toHaveBeenCalledWith('/refresh');
       expect(authStore.token).toBe('new-jwt-token-456');
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'new-jwt-token-456');
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        'accessToken',
+        'new-jwt-token-456'
+      );
     });
 
     it('should handle refresh failure', async () => {
@@ -228,9 +235,9 @@ describe('Auth Store', () => {
             email: 'updated@example.com',
             roles: ['user'],
             isActive: true,
-            avatarUrl: 'https://example.com/avatar.jpg'
-          }
-        }
+            avatarUrl: 'https://example.com/avatar.jpg',
+          },
+        },
       };
 
       vi.mocked(apiClient.get).mockResolvedValue(mockUserProfile);
@@ -253,7 +260,7 @@ describe('Auth Store', () => {
 
       const updateData = {
         name: 'Updated Name',
-        email: 'updated@example.com'
+        email: 'updated@example.com',
       };
 
       const mockResponse = {
@@ -261,9 +268,9 @@ describe('Auth Store', () => {
           success: true,
           user: {
             ...authStore.user,
-            ...updateData
-          }
-        }
+            ...updateData,
+          },
+        },
       };
 
       vi.mocked(apiClient.put).mockResolvedValue(mockResponse);
@@ -279,15 +286,15 @@ describe('Auth Store', () => {
   describe('Error Management', () => {
     it('should clear errors', () => {
       authStore.error = 'Some error';
-      
+
       authStore.clearError();
-      
+
       expect(authStore.error).toBeNull();
     });
 
     it('should set error messages', () => {
       authStore.setError('New error message');
-      
+
       expect(authStore.error).toBe('New error message');
     });
   });
@@ -295,7 +302,7 @@ describe('Auth Store', () => {
   describe('Computed Properties', () => {
     it('should correctly compute isAuthenticated', () => {
       expect(authStore.isAuthenticated).toBe(false);
-      
+
       authStore.token = 'some-token';
       authStore.user = {
         id: 1,
@@ -304,13 +311,13 @@ describe('Auth Store', () => {
         roles: ['user'],
         isActive: true,
       };
-      
+
       expect(authStore.isAuthenticated).toBe(true);
     });
 
     it('should correctly compute user roles', () => {
       expect(authStore.hasRole('admin')).toBe(false);
-      
+
       authStore.user = {
         id: 1,
         name: 'Admin User',
@@ -318,7 +325,7 @@ describe('Auth Store', () => {
         roles: ['user', 'admin'],
         isActive: true,
       };
-      
+
       expect(authStore.hasRole('admin')).toBe(true);
       expect(authStore.hasRole('user')).toBe(true);
       expect(authStore.hasRole('moderator')).toBe(false);
@@ -326,7 +333,7 @@ describe('Auth Store', () => {
 
     it('should check if user is admin', () => {
       expect(authStore.isAdmin).toBe(false);
-      
+
       authStore.user = {
         id: 1,
         name: 'Admin User',
@@ -334,7 +341,7 @@ describe('Auth Store', () => {
         roles: ['user', 'admin'],
         isActive: true,
       };
-      
+
       expect(authStore.isAdmin).toBe(true);
     });
   });
@@ -342,10 +349,10 @@ describe('Auth Store', () => {
   describe('Persistence', () => {
     it('should initialize from localStorage', () => {
       localStorageMock.getItem.mockReturnValue('persisted-token');
-      
+
       setActivePinia(createPinia());
       const newStore = useAuthStore();
-      
+
       expect(newStore.token).toBe('persisted-token');
     });
 
@@ -360,18 +367,21 @@ describe('Auth Store', () => {
             email: 'test@example.com',
             roles: ['user'],
             isActive: true,
-          }
-        }
+          },
+        },
       };
 
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
       await authStore.login({
         email: 'test@example.com',
-        password: 'password123'
+        password: 'password123',
       });
 
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'new-token');
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        'accessToken',
+        'new-token'
+      );
     });
 
     it('should remove token from localStorage on logout', async () => {
@@ -390,17 +400,19 @@ describe('Auth Store', () => {
           status: 401,
           data: {
             error: 'Authentication failed',
-            code: 'AUTH_FAILED'
-          }
-        }
+            code: 'AUTH_FAILED',
+          },
+        },
       };
 
       vi.mocked(apiClient.post).mockRejectedValue(mockError);
 
-      await expect(authStore.login({
-        email: 'test@example.com',
-        password: 'wrongpassword'
-      })).rejects.toThrow();
+      await expect(
+        authStore.login({
+          email: 'test@example.com',
+          password: 'wrongpassword',
+        })
+      ).rejects.toThrow();
 
       expect(authStore.error).toBe('Authentication failed');
     });
@@ -410,17 +422,19 @@ describe('Auth Store', () => {
         response: {
           status: 500,
           data: {
-            error: 'Internal server error'
-          }
-        }
+            error: 'Internal server error',
+          },
+        },
       };
 
       vi.mocked(apiClient.post).mockRejectedValue(mockError);
 
-      await expect(authStore.login({
-        email: 'test@example.com',
-        password: 'password123'
-      })).rejects.toThrow();
+      await expect(
+        authStore.login({
+          email: 'test@example.com',
+          password: 'password123',
+        })
+      ).rejects.toThrow();
 
       expect(authStore.error).toBe('Server error occurred');
     });
