@@ -1,9 +1,6 @@
-# Prevent individual handler files from being deployed as separate functions
-api/tests/
-api/scripts/
-
-# Only api/index.ts should be deployed as a serverless function
-# All other .ts files in api/ should be ignored
+# Exclude test files and development artifacts  
+tests/
+scripts/
 
 # Exclude debug and temporary files
 debug-*
@@ -17,3 +14,7 @@ check-db.mjs
 test-results/
 e2e-results/
 playwright-report/
+
+# Exclude development and temp files
+.env.test
+.env.development.local

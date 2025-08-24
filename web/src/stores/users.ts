@@ -171,18 +171,15 @@ export const useUsersStore = defineStore('users', () => {
       console.log('📥 Raw API response:', response);
       console.log('📥 API response.data:', response.data);
       
-      const responseData = response.data as any; // Type assertion
+      // Handle both response formats - direct response or wrapped in .data
+      const responseData = (response.data !== undefined) ? response.data : response as any;
       console.log('📊 Parsed responseData:', responseData);
-      console.log('📊 responseData.data:', responseData.data);
-      console.log('📊 responseData.items:', responseData.items);
-      console.log('📊 Array.isArray(responseData):', Array.isArray(responseData));
-      console.log('📊 Array.isArray(responseData.data):', Array.isArray(responseData.data));
       
       // Handle both possible response formats
       let usersArray: any[] = [];
-      if (Array.isArray(responseData.data)) {
+      if (Array.isArray(responseData?.data)) {
         usersArray = responseData.data;
-      } else if (Array.isArray(responseData.items)) {
+      } else if (Array.isArray(responseData?.items)) {
         usersArray = responseData.items;
       } else if (Array.isArray(responseData)) {
         usersArray = responseData;
@@ -195,12 +192,13 @@ export const useUsersStore = defineStore('users', () => {
       console.log('👥 Users set to:', users.value.length, 'items');
       console.log('👥 First user:', users.value[0]);
       
-      if (responseData.pagination) {
+      // Update pagination data - API returns pagination directly on response object
+      if (responseData) {
         pagination.value = {
-          page: responseData.pagination.page || responseData.page,
-          size: responseData.pagination.size || responseData.size,
-          total: responseData.pagination.total || responseData.total,
-          totalPages: responseData.pagination.totalPages || responseData.totalPages
+          page: responseData.page || pagination.value.page,
+          size: responseData.size || pagination.value.size,
+          total: responseData.total || 0,
+          totalPages: responseData.totalPages || 1
         };
       }
       
