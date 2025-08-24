@@ -44,10 +44,18 @@
           
           <div class="user-menu">
             <div class="user-info">
-              <n-avatar 
-                :size="32"
-                :src="user?.avatarUrl || defaultAvatar" 
+              <!-- Custom avatar handling to bypass n-avatar image loading issues -->
+              <img 
+                v-if="user?.avatarUrl"
+                :src="avatarUrl" 
                 :alt="user?.name"
+                class="user-avatar-image"
+                @error="handleAvatarError"
+                @load="handleAvatarLoad"
+              />
+              <n-avatar 
+                v-else
+                :size="32"
                 round
                 class="user-avatar"
               >
@@ -234,30 +242,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, h, nextTick } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useMessage, useDialog } from 'naive-ui';
 import {
-  SettingsOutline,
   Add,
-  Search,
-  MenuOutline,
   CloseOutline,
+  MenuOutline,
   People,
   Person,
+  Search,
+  SettingsOutline,
 } from '@vicons/ionicons5';
+import { useDialog, useMessage } from 'naive-ui';
+import { computed, h, nextTick, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore, type User } from '@/stores/auth';
 import { useUsersStore } from '@/stores/users';
 
 // Components
-import UserTable from '@/components/UserTable.vue';
+import AccountActivityCard from '@/components/AccountActivityCard.vue';
+import PaginationControls from '@/components/common/PaginationControls.vue';
 import UserForm from '@/components/forms/UserForm.vue';
 import UserProfile from '@/components/forms/UserProfile.vue';
-import PaginationControls from '@/components/common/PaginationControls.vue';
 import ProfileSummaryCard from '@/components/ProfileSummaryCard.vue';
-import AccountActivityCard from '@/components/AccountActivityCard.vue';
 import QuickActionsCard from '@/components/QuickActionsCard.vue';
+import UserTable from '@/components/UserTable.vue';
 
 // Composables
 const route = useRoute();
@@ -284,6 +292,22 @@ const isAdmin = computed(() => user.value?.roles.includes('admin') ?? false);
 const defaultAvatar = computed(() => 
   `https://api.dicebear.com/7.x/initials/svg?seed=${user.value?.name || 'User'}`
 );
+
+// Convert relative avatar URL to absolute URL
+const avatarUrl = computed(() => {
+  const userAvatarUrl = user.value?.avatarUrl;
+  if (!userAvatarUrl) return defaultAvatar.value;
+  
+  // If already absolute URL, return as is
+  if (userAvatarUrl.startsWith('http://') || userAvatarUrl.startsWith('https://')) {
+    return userAvatarUrl;
+  }
+  
+  // Convert relative URL to absolute URL
+  // In development, the frontend serves static files, so we use the frontend URL
+  const baseUrl = import.meta.env.DEV ? 'http://localhost:5173' : '';
+  return `${baseUrl}${userAvatarUrl.startsWith('/') ? userAvatarUrl : '/' + userAvatarUrl}`;
+});
 
 const pageTitle = computed(() => {
   if (route.path === '/users' && isAdmin.value) return 'User Management';
@@ -475,6 +499,17 @@ async function handleUserMenuSelect(key: string) {
   }
 }
 
+// Methods - Avatar handling
+function handleAvatarError(event: Event) {
+  const target = event.target as HTMLImageElement;
+  console.warn('Avatar image failed to load:', target.src);
+}
+
+function handleAvatarLoad(event: Event) {
+  const target = event.target as HTMLImageElement;
+  console.log('Avatar image loaded successfully:', target.src);
+}
+
 // Watchers & Lifecycle
 watch(() => route.path, () => {
   // Load users when navigating to users page
@@ -615,6 +650,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.user-avatar-image {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e0e6;
+  background: #f5f5f5;
 }
 
 .user-details {

@@ -2,10 +2,19 @@
   <n-card title="Profile Summary" class="profile-summary-card">
     <div class="profile-content">
       <div class="avatar-section">
+        <!-- Use img element directly when avatar is available, fallback to n-avatar text -->
+        <div v-if="avatarUrl" class="custom-avatar" :style="{ width: '60px', height: '60px' }">
+          <img 
+            :src="avatarUrl" 
+            :alt="user?.name || 'User Avatar'"
+            class="avatar-image"
+            @error="handleAvatarError"
+            @load="handleAvatarLoad"
+          />
+        </div>
         <n-avatar 
+          v-else
           :size="60" 
-          :src="user?.avatarUrl" 
-          :fallback-src="defaultAvatar"
           round
           class="profile-avatar"
         >
@@ -61,15 +70,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import type { User } from '@/stores/auth';
 import {
-  MailOutline,
   CalendarOutline,
   CheckmarkCircleOutline,
   CloseCircleOutline,
+  MailOutline,
   PersonOutline
 } from '@vicons/ionicons5';
+import { computed } from 'vue';
 
 interface Props {
   user: User | null;
@@ -86,9 +95,36 @@ const defaultAvatar = computed(() =>
   `https://api.dicebear.com/7.x/initials/svg?seed=${props.user?.name || 'User'}`
 );
 
+// Convert relative avatar URL to absolute URL
+const avatarUrl = computed(() => {
+  const userAvatarUrl = props.user?.avatarUrl;
+  if (!userAvatarUrl) return undefined;
+  
+  // If already absolute URL, return as is
+  if (userAvatarUrl.startsWith('http://') || userAvatarUrl.startsWith('https://')) {
+    return userAvatarUrl;
+  }
+  
+  // Convert relative URL to absolute URL
+  // In development, the frontend serves static files, so we use the frontend URL
+  const baseUrl = import.meta.env.DEV ? 'http://localhost:5173' : '';
+  return `${baseUrl}${userAvatarUrl.startsWith('/') ? userAvatarUrl : '/' + userAvatarUrl}`;
+});
+
 function formatDate(dateString: string | undefined) {
   if (!dateString) return 'Unknown';
   return new Date(dateString).toLocaleDateString();
+}
+
+function handleAvatarError(error: Event) {
+  console.error('Avatar image loading failed:', error);
+  console.log('Image URL that failed:', (error.target as HTMLImageElement)?.src);
+  console.log('User avatar URL from props:', props.user?.avatarUrl);
+  console.log('Computed avatarUrl value:', avatarUrl.value);
+}
+
+function handleAvatarLoad() {
+  console.log('Avatar image loaded successfully:', avatarUrl.value);
 }
 </script>
 
@@ -111,6 +147,22 @@ function formatDate(dateString: string | undefined) {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   font-weight: 600;
+}
+
+.custom-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .profile-details {

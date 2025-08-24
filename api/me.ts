@@ -45,10 +45,13 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
 async function handleGetProfile(req: AuthenticatedRequest, res: VercelResponse) {
   const userId = req.user.id;
 
+  console.log(`[me-debug] Fetching user id=${userId}`);
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: USER_SELECT_FIELDS,
   });
+
+  console.log(`[me-debug] Found user:`, JSON.stringify(user, null, 2));
 
   if (!user || !user.isActive) {
     return res.status(404).json({ error: 'User not found or inactive' });

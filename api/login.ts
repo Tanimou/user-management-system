@@ -63,6 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       select: USER_AUTH_SELECT_FIELDS,
     });
 
+    console.log(`[login-debug] Found user:`, JSON.stringify(user, null, 2));
+
     // Check if user exists and is active
     if (!user || !user.isActive) {
       recordAuthFailure(req, email);
@@ -101,6 +103,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Return response (excluding password)
     const { password: _, ...userWithoutPassword } = user;
+
+    console.log(`[login-debug] User without password:`, JSON.stringify(userWithoutPassword, null, 2));
 
     return res.status(200).json({
       token: accessToken,

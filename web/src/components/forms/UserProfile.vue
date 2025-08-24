@@ -15,7 +15,7 @@
           <div class="profile-avatar">
             <n-avatar 
               :size="80" 
-              :src="authStore.user?.avatarUrl" 
+              :src="userAvatarUrl" 
               :fallback-src="defaultAvatarUrl"
               round
             >
@@ -224,20 +224,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue';
-import { useMessage } from 'naive-ui';
-import { 
-  PersonOutline as PersonIcon,
-  CloseOutline as CloseIcon,
-  InformationCircleOutline as InformationCircleIcon,
-  LockClosedOutline as LockClosedIcon,
-  TimeOutline as TimeIcon,
-  FlashOutline as ActivityIcon
-} from '@vicons/ionicons5';
 import { useAuthStore } from '@/stores/auth';
-import PasswordStrengthMeter from '../common/PasswordStrengthMeter.vue';
+import {
+    FlashOutline as ActivityIcon,
+    CloseOutline as CloseIcon,
+    InformationCircleOutline as InformationCircleIcon,
+    LockClosedOutline as LockClosedIcon,
+    PersonOutline as PersonIcon,
+    TimeOutline as TimeIcon
+} from '@vicons/ionicons5';
+import { useMessage } from 'naive-ui';
+import { computed, reactive, ref, watch } from 'vue';
 import AvatarUpload from '../AvatarUpload.vue';
-import apiClient from '@/api/axios';
+import PasswordStrengthMeter from '../common/PasswordStrengthMeter.vue';
 
 interface Props {
   show: boolean;
@@ -267,6 +266,22 @@ const showPasswordForm = ref(false);
 const showAvatarUpload = ref(false);
 const recentActivity = ref<Activity[]>([]);
 const defaultAvatarUrl = '/default-avatar.png'; // Placeholder for default avatar
+
+// Convert relative avatar URL to absolute URL
+const userAvatarUrl = computed(() => {
+  const avatarUrl = authStore.user?.avatarUrl;
+  if (!avatarUrl) return defaultAvatarUrl;
+  
+  // If already absolute URL, return as is
+  if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+    return avatarUrl;
+  }
+  
+  // Convert relative URL to absolute URL
+  // In development, the frontend serves static files, so we use the frontend URL
+  const baseUrl = import.meta.env.DEV ? 'http://localhost:5173' : '';
+  return `${baseUrl}${avatarUrl.startsWith('/') ? avatarUrl : '/' + avatarUrl}`;
+});
 
 // Form data
 const formData = reactive({
