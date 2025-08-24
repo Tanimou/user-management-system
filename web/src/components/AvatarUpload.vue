@@ -119,8 +119,26 @@ const visible = computed({
   }
 });
 
-function handleBeforeUpload(options: { file: File; fileList: File[] }) {
-  const file = options.file;
+// Naive UI's n-upload passes an UploadFileInfo object whose 'file' property contains the native File.
+// In some environments (e.g., Playwright automation) the hook can receive an object where `file` is
+// already the native File or an UploadFileInfo with a `file` field. The original implementation assumed
+// a native File which caused `FileReader.readAsDataURL` to receive an incompatible object instance
+// leading to: "Failed to execute 'readAsDataURL' on 'FileReader': parameter 1 is not of type 'Blob'".
+// We normalise the value here.
+function handleBeforeUpload(options: any) {
+  // Support both signatures: { file: File } or UploadFileInfo
+  const possible = options?.file;
+  const file: File | null = (possible instanceof File)
+    ? possible
+    : (possible && possible.file instanceof File)
+      ? possible.file
+      : null;
+
+  if (!file) {
+    console.warn('[AvatarUpload] Unsupported file object received:', options?.file);
+    message.error('Failed to read file. Please try again.');
+    return false;
+  }
   
   // Validate file type
   if (!file.type.startsWith('image/')) {
@@ -138,11 +156,21 @@ function handleBeforeUpload(options: { file: File; fileList: File[] }) {
   selectedFile.value = file;
   
   // Create preview URL
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    previewUrl.value = e.target?.result as string;
-  };
-  reader.readAsDataURL(file);
+  try {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewUrl.value = e.target?.result as string;
+    };
+    reader.onerror = (e) => {
+      console.error('[AvatarUpload] FileReader error', e);
+      message.error('Could not read image file');
+    };
+    reader.readAsDataURL(file);
+  } catch (err) {
+    console.error('[AvatarUpload] Unexpected FileReader failure', err);
+    message.error('Failed to preview image.');
+    return false;
+  }
   
   return false; // Prevent automatic upload
 }

@@ -51,19 +51,22 @@ export default async function handler(req: AuthenticatedRequest, res: VercelResp
 async function handleUpload(req: AuthenticatedRequest, res: VercelResponse) {
   try {
     const userId = req.user.id;
+  console.log(`[avatar-upload] Start user=${userId}`);
 
-    // Parse multipart form data
-    const { files } = await parseFormData(req);
+  // Parse multipart form data
+  const { files } = await parseFormData(req);
 
-    // Get the uploaded file
-    const uploadedFile = Array.isArray(files.avatar) ? files.avatar[0] : files.avatar;
+  // Get the uploaded file
+  const uploadedFile = Array.isArray(files.avatar) ? files.avatar[0] : files.avatar;
 
-    if (!uploadedFile) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+  if (!uploadedFile) {
+    console.warn('[avatar-upload] No file field "avatar" provided');
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
 
     // Validate file type
     if (!ALLOWED_MIME_TYPES.includes(uploadedFile.mimetype || '')) {
+      console.warn(`[avatar-upload] Invalid mime type ${uploadedFile.mimetype}`);
       return res.status(400).json({
         error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.',
       });
@@ -71,6 +74,7 @@ async function handleUpload(req: AuthenticatedRequest, res: VercelResponse) {
 
     // Validate file size
     if (uploadedFile.size > MAX_FILE_SIZE) {
+      console.warn(`[avatar-upload] File too large size=${uploadedFile.size}`);
       return res.status(400).json({
         error: `File size too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
       });
@@ -122,14 +126,16 @@ async function handleUpload(req: AuthenticatedRequest, res: VercelResponse) {
     }
 
     // Update user's avatarUrl in database
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        avatarUrl: avatarUrl,
-        updatedAt: new Date(),
-      },
-      select: USER_SELECT_FIELDS,
-    });
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      avatarUrl: avatarUrl,
+      updatedAt: new Date(),
+    },
+    select: USER_SELECT_FIELDS,
+  });
+
+  console.log(`[avatar-upload] Success user=${userId} url=${avatarUrl}`);
 
     return res.status(200).json({
       message: 'Avatar uploaded successfully',
@@ -139,7 +145,7 @@ async function handleUpload(req: AuthenticatedRequest, res: VercelResponse) {
       },
     });
   } catch (error) {
-    console.error('Avatar upload error:', error);
+  console.error('[avatar-upload] Error:', error);
 
     if (error instanceof Error) {
       if (error.message.includes('maxFileSize')) {
