@@ -20,7 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
-  const TOKEN_KEY = 'auth_token';
+  const TOKEN_KEY = 'accessToken';
 
   // Initialize token from localStorage
   const initializeToken = () => {
@@ -316,7 +316,7 @@ export const useAuthStore = defineStore('auth', () => {
       const newToken = response.data?.token;
       if (newToken) {
         token.value = newToken;
-        localStorage.setItem('auth_token', newToken);
+        localStorage.setItem('accessToken', newToken);
         // Update axios client with new token
         apiClient.setAuthToken(newToken);
       }

@@ -42,7 +42,7 @@ describe('Auth Store', () => {
       setActivePinia(createPinia());
       const newStore = useAuthStore();
       
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('auth_token');
+      expect(localStorageMock.getItem).toHaveBeenCalledWith('accessToken');
       expect(newStore.token).toBe('stored-token');
     });
   });
@@ -77,7 +77,7 @@ describe('Auth Store', () => {
       expect(authStore.token).toBe('jwt-token-123');
       expect(authStore.isAuthenticated).toBe(true);
       expect(authStore.error).toBeNull();
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('auth_token', 'jwt-token-123');
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'jwt-token-123');
     });
 
     it('should handle login failure', async () => {
@@ -160,7 +160,7 @@ describe('Auth Store', () => {
       expect(authStore.token).toBeNull();
       expect(authStore.isAuthenticated).toBe(false);
       expect(authStore.error).toBeNull();
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('accessToken');
     });
 
     it('should clear state even if logout API call fails', async () => {
@@ -182,7 +182,7 @@ describe('Auth Store', () => {
       expect(authStore.user).toBeNull();
       expect(authStore.token).toBeNull();
       expect(authStore.isAuthenticated).toBe(false);
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('accessToken');
     });
   });
 
@@ -201,7 +201,7 @@ describe('Auth Store', () => {
 
       expect(apiClient.post).toHaveBeenCalledWith('/refresh');
       expect(authStore.token).toBe('new-jwt-token-456');
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('auth_token', 'new-jwt-token-456');
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'new-jwt-token-456');
     });
 
     it('should handle refresh failure', async () => {
@@ -213,7 +213,7 @@ describe('Auth Store', () => {
       expect(authStore.user).toBeNull();
       expect(authStore.token).toBeNull();
       expect(authStore.isAuthenticated).toBe(false);
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('accessToken');
     });
   });
 
@@ -371,7 +371,7 @@ describe('Auth Store', () => {
         password: 'password123'
       });
 
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('auth_token', 'new-token');
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'new-token');
     });
 
     it('should remove token from localStorage on logout', async () => {
@@ -379,7 +379,7 @@ describe('Auth Store', () => {
 
       await authStore.logout();
 
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('accessToken');
     });
   });
 
