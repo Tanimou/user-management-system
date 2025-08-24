@@ -1,26 +1,26 @@
-import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
 
 // Mock prisma as default export
 vi.mock('../lib/prisma', () => ({
   default: {
     user: {
-      findUnique: vi.fn()
-    }
-  }
+      findUnique: vi.fn(),
+    },
+  },
 }));
 
 // Mock JWT
 vi.mock('jsonwebtoken', () => ({
   default: {
-    verify: vi.fn()
-  }
+    verify: vi.fn(),
+  },
 }));
 
 // Import after mocking
 import jwt from 'jsonwebtoken';
+import { verifyToken, withAuth } from '../lib/middleware/enhanced-auth';
 import prisma from '../lib/prisma';
-import { withAuth, verifyToken, type AuthenticatedRequest } from '../lib/middleware/enhanced-auth';
 
 describe('Enhanced Auth Middleware', () => {
   let mockReq: Partial<VercelRequest>;
@@ -30,18 +30,18 @@ describe('Enhanced Auth Middleware', () => {
   beforeEach(() => {
     // Clear all mocks first
     vi.clearAllMocks();
-    
+
     mockReq = {
       headers: {},
       body: {},
       query: {},
-      method: 'GET'
+      method: 'GET',
     };
     mockRes = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn().mockReturnThis(),
       setHeader: vi.fn().mockReturnThis(),
-      end: vi.fn().mockReturnThis()
+      end: vi.fn().mockReturnThis(),
     };
     mockHandler = vi.fn();
   });
@@ -73,7 +73,7 @@ describe('Enhanced Auth Middleware', () => {
         id: mockUser.id,
         email: mockUser.email,
         roles: mockUser.roles,
-        isActive: mockUser.isActive
+        isActive: mockUser.isActive,
       });
       expect(result.error).toBeUndefined();
     });
@@ -130,8 +130,8 @@ describe('Enhanced Auth Middleware', () => {
             id: mockUser.id,
             email: mockUser.email,
             roles: mockUser.roles,
-            isActive: mockUser.isActive
-          }
+            isActive: mockUser.isActive,
+          },
         }),
         mockRes
       );
@@ -146,7 +146,7 @@ describe('Enhanced Auth Middleware', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
         error: 'Authentication required',
-        message: 'Missing or invalid authorization header'
+        message: 'Missing or invalid authorization header',
       });
       expect(mockHandler).not.toHaveBeenCalled();
     });

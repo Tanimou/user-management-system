@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
 import apiClient from '@/api/axios';
+import { defineStore } from 'pinia';
+import { computed, ref } from 'vue';
 import type { User } from './auth';
 
 interface Pagination {
@@ -28,16 +28,16 @@ export const useUsersStore = defineStore('users', () => {
     page: 1,
     size: 10,
     total: 0,
-    totalPages: 0
+    totalPages: 0,
   });
   const filters = ref<Filters>({
     search: '',
     role: 'all',
-    status: 'all'
+    status: 'all',
   });
   const sorting = ref<Sorting>({
     column: 'createdAt',
-    direction: 'desc'
+    direction: 'desc',
   });
   const loading = ref(false);
 
@@ -51,11 +51,14 @@ export const useUsersStore = defineStore('users', () => {
     try {
       // Demo mode - return mock data if no real API
       const token = localStorage.getItem('accessToken');
-      console.log('🔑 Token check:', { token: token?.substring(0, 20) + '...', isDemo: token === 'admin-token' || token === 'demo-token' });
-      
+      console.log('🔑 Token check:', {
+        token: token?.substring(0, 20) + '...',
+        isDemo: token === 'admin-token' || token === 'demo-token',
+      });
+
       if (token === 'admin-token' || token === 'demo-token') {
         await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-        
+
         const demoUsers: User[] = [
           {
             id: 1,
@@ -64,7 +67,7 @@ export const useUsersStore = defineStore('users', () => {
             roles: ['user'],
             isActive: true,
             createdAt: '2024-01-15T10:00:00Z',
-            updatedAt: '2024-01-15T10:00:00Z'
+            updatedAt: '2024-01-15T10:00:00Z',
           },
           {
             id: 2,
@@ -73,7 +76,7 @@ export const useUsersStore = defineStore('users', () => {
             roles: ['admin', 'user'],
             isActive: true,
             createdAt: '2024-01-10T09:00:00Z',
-            updatedAt: '2024-01-20T14:30:00Z'
+            updatedAt: '2024-01-20T14:30:00Z',
           },
           {
             id: 3,
@@ -82,7 +85,7 @@ export const useUsersStore = defineStore('users', () => {
             roles: ['user'],
             isActive: true,
             createdAt: '2024-02-01T08:00:00Z',
-            updatedAt: '2024-02-01T08:00:00Z'
+            updatedAt: '2024-02-01T08:00:00Z',
           },
           {
             id: 4,
@@ -92,7 +95,7 @@ export const useUsersStore = defineStore('users', () => {
             isActive: false,
             createdAt: '2024-01-20T12:00:00Z',
             updatedAt: '2024-02-15T16:45:00Z',
-            deletedAt: '2024-02-15T16:45:00Z'
+            deletedAt: '2024-02-15T16:45:00Z',
           },
           {
             id: 5,
@@ -101,32 +104,33 @@ export const useUsersStore = defineStore('users', () => {
             roles: ['admin', 'user'],
             isActive: true,
             createdAt: '2024-01-05T07:30:00Z',
-            updatedAt: '2024-01-25T11:15:00Z'
-          }
+            updatedAt: '2024-01-25T11:15:00Z',
+          },
         ];
 
         // Apply filtering
         let filteredUsers = demoUsers;
-        
+
         if (filters.value.search) {
           const searchLower = filters.value.search.toLowerCase();
-          filteredUsers = filteredUsers.filter(u => 
-            u.name.toLowerCase().includes(searchLower) || 
-            u.email.toLowerCase().includes(searchLower)
+          filteredUsers = filteredUsers.filter(
+            u =>
+              u.name.toLowerCase().includes(searchLower) ||
+              u.email.toLowerCase().includes(searchLower)
           );
         }
-        
+
         if (filters.value.role !== 'all') {
-          filteredUsers = filteredUsers.filter(u => 
+          filteredUsers = filteredUsers.filter(u =>
             u.roles.includes(filters.value.role)
           );
         }
-        
+
         if (filters.value.status !== 'all') {
           const isActive = filters.value.status === 'active';
           filteredUsers = filteredUsers.filter(u => u.isActive === isActive);
         }
-        
+
         // Apply sorting
         filteredUsers.sort((a, b) => {
           const aVal = a[sorting.value.column as keyof User] as string;
@@ -134,16 +138,18 @@ export const useUsersStore = defineStore('users', () => {
           const order = sorting.value.direction === 'asc' ? 1 : -1;
           return aVal < bVal ? -order : aVal > bVal ? order : 0;
         });
-        
+
         // Apply pagination
         const start = (pagination.value.page - 1) * pagination.value.size;
         const end = start + pagination.value.size;
         const paginatedUsers = filteredUsers.slice(start, end);
-        
+
         users.value = paginatedUsers;
         pagination.value.total = filteredUsers.length;
-        pagination.value.totalPages = Math.ceil(filteredUsers.length / pagination.value.size);
-        
+        pagination.value.totalPages = Math.ceil(
+          filteredUsers.length / pagination.value.size
+        );
+
         return;
       }
 
@@ -153,7 +159,7 @@ export const useUsersStore = defineStore('users', () => {
         size: pagination.value.size,
         search: filters.value.search || undefined,
         sort: sorting.value.column,
-        dir: sorting.value.direction
+        dir: sorting.value.direction,
       };
 
       // Only include role filter if not 'all'
@@ -170,11 +176,12 @@ export const useUsersStore = defineStore('users', () => {
       const response = await apiClient.get('/users', { params });
       console.log('📥 Raw API response:', response);
       console.log('📥 API response.data:', response.data);
-      
+
       // Handle both response formats - direct response or wrapped in .data
-      const responseData = (response.data !== undefined) ? response.data : response as any;
+      const responseData =
+        response.data !== undefined ? response.data : (response as any);
       console.log('📊 Parsed responseData:', responseData);
-      
+
       // Handle both possible response formats
       let usersArray: any[] = [];
       if (Array.isArray(responseData?.data)) {
@@ -187,21 +194,20 @@ export const useUsersStore = defineStore('users', () => {
         console.error('❌ Unexpected response format:', responseData);
         usersArray = [];
       }
-      
+
       users.value = usersArray;
       console.log('👥 Users set to:', users.value.length, 'items');
       console.log('👥 First user:', users.value[0]);
-      
+
       // Update pagination data - API returns pagination directly on response object
       if (responseData) {
         pagination.value = {
           page: responseData.page || pagination.value.page,
           size: responseData.size || pagination.value.size,
           total: responseData.total || 0,
-          totalPages: responseData.totalPages || 1
+          totalPages: responseData.totalPages || 1,
         };
       }
-      
     } catch (error) {
       console.error('Failed to load users:', error);
       throw error;
@@ -287,8 +293,8 @@ export const useUsersStore = defineStore('users', () => {
   function resetFilters() {
     filters.value = {
       search: '',
-      role: 'all', 
-      status: 'all'
+      role: 'all',
+      status: 'all',
     };
     pagination.value.page = 1;
   }
@@ -300,10 +306,10 @@ export const useUsersStore = defineStore('users', () => {
     filters,
     sorting,
     loading,
-    
+
     // Getters
     filteredUsers,
-    
+
     // Actions
     loadUsers,
     createUser,
@@ -316,6 +322,6 @@ export const useUsersStore = defineStore('users', () => {
     setSorting,
     setPage,
     setPageSize,
-    resetFilters
+    resetFilters,
   };
 });
