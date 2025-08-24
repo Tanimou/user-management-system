@@ -1,5 +1,4 @@
 # Prevent individual handler files from being deployed as separate functions
-api/handlers/
 api/tests/
 api/scripts/
 

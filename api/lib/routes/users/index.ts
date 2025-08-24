@@ -1,17 +1,17 @@
 import type { VercelResponse } from '@vercel/node';
-import { logUserCreation } from '../../lib/audit-logger.js';
-import { hashPassword } from '../../lib/auth.js';
-import { 
-  withCORS, 
-  withErrorHandling, 
-  withAuth, 
+import { logUserCreation } from '../../../lib/audit-logger.js';
+import { hashPassword } from '../../../lib/auth.js';
+import {
+  withCORS,
+  withErrorHandling,
+  withAuth,
   withAdminRole,
   validateBody,
   validateQuery,
-  type AuthenticatedRequest 
-} from '../../lib/middleware/index.js';
-import prisma from '../../lib/prisma.js';
-import { createUserSchema, getUsersSchema } from '../../lib/schemas/user.js';
+  type AuthenticatedRequest,
+} from '../../../lib/middleware/index.js';
+import prisma from '../../../lib/prisma.js';
+import { createUserSchema, getUsersSchema } from '../../../lib/schemas/user.js';
 
 // GET /api/users - List users (authenticated users can read)
 const getUsersHandler = withCORS(

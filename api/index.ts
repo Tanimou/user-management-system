@@ -1,19 +1,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Import all handlers from the handlers directory
-import healthHandler from './handlers/health.js';
-import loginHandler from './handlers/login.js';
-import meHandler from './handlers/me.js';
-import refreshHandler from './handlers/refresh.js';
-import rolesHandler from './handlers/roles.js';
-import uploadAvatarHandler from './handlers/upload-avatar.js';
-import validatePasswordHandler from './handlers/validate-password.js';
-import dbMonitorHandler from './handlers/db-monitor.js';
-import performanceHandler from './handlers/performance.js';
-import usersIndexHandler from './handlers/users/index.js';
-import usersIdHandler from './handlers/users/[id].js';
-import usersDeactivatedHandler from './handlers/users/deactivated.js';
-
+// Import all handlers from the lib/routes directory
+import healthHandler from './lib/routes/health.js';
+import loginHandler from './lib/routes/login.js';
+import meHandler from './lib/routes/me.js';
+import refreshHandler from './lib/routes/refresh.js';
+import rolesHandler from './lib/routes/roles.js';
+import uploadAvatarHandler from './lib/routes/upload-avatar.js';
+import validatePasswordHandler from './lib/routes/validate-password.js';
+import dbMonitorHandler from './lib/routes/db-monitor.js';
+import performanceHandler from './lib/routes/performance.js';
+import usersIndexHandler from './lib/routes/users/index.js';
+import usersIdHandler from './lib/routes/users/[id].js';
+import usersDeactivatedHandler from './lib/routes/users/deactivated.js';
 /**
  * Main API router - routes all /api/* requests to appropriate handlers
  * This consolidates all endpoints into a single serverless function for Vercel

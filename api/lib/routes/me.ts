@@ -1,14 +1,14 @@
 import type { VercelResponse } from '@vercel/node';
-import { hashPassword } from '../lib/auth.js';
+import { hashPassword } from '../../lib/auth.js';
 import {
   validateBody,
   withAuth,
   withCORS,
   withErrorHandling,
   type AuthenticatedRequest,
-} from '../lib/middleware/index.js';
-import prisma, { USER_SELECT_FIELDS } from '../lib/prisma.js';
-import { updateUserSchema } from '../lib/schemas/user.js';
+} from '../../lib/middleware/index.js';
+import prisma, { USER_SELECT_FIELDS } from '../../lib/prisma.js';
+import { updateUserSchema } from '../../lib/schemas/user.js';
 
 // GET /api/me - Get current user profile
 const getProfileHandler = withCORS(

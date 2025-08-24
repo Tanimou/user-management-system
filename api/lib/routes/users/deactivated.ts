@@ -1,14 +1,14 @@
 import type { VercelResponse } from '@vercel/node';
-import { 
-  withCORS, 
-  withErrorHandling, 
-  withAuth, 
+import {
+  withCORS,
+  withErrorHandling,
+  withAuth,
   withAdminRole,
   validateQuery,
-  type AuthenticatedRequest 
-} from '../../lib/middleware/index.js';
-import prisma from '../../lib/prisma.js';
-import { getUsersSchema } from '../../lib/schemas/user.js';
+  type AuthenticatedRequest,
+} from '../../../lib/middleware/index.js';
+import prisma from '../../../lib/prisma.js';
+import { getUsersSchema } from '../../../lib/schemas/user.js';
 
 // GET /api/users/deactivated - List deactivated users (admin only)
 const getDeactivatedUsersHandler = withCORS(

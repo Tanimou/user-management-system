@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { prisma } from '../lib/prisma.js';
+import { prisma } from '../../lib/prisma.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle OPTIONS requests for CORS
