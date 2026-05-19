@@ -8,8 +8,9 @@ import {
   verifyPassword,
   type JWTPayload,
 } from './lib/auth.js';
-import prisma from "./lib/prisma.js";
+import prisma, { USER_AUTH_SELECT_FIELDS } from "./lib/prisma.js";
 import { createAuthRateLimit, recordAuthFailure, recordAuthSuccess } from './lib/rate-limiter.js';
+import { validatePasswordPolicy } from './lib/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS and security headers
@@ -46,28 +47,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .json({ error: "Invalid email or password format" });
     }
 
-    // Validate password minimum length (8+ characters)
-    if (password.length < 8) {
+    // Validate password policy (enhanced validation)
+    const policyValidation = validatePasswordPolicy(password);
+    if (!policyValidation.isValid) {
       return res.status(400).json({ 
-        error: "Password must be at least 8 characters long" 
+        error: 'Password does not meet policy requirements',
+        details: policyValidation.errors,
+        code: 'INVALID_PASSWORD_POLICY'
       });
     }
 
     // Find user by email (case-insensitive)
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        password: true,
-        roles: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        avatarUrl: true,
-      },
+      select: USER_AUTH_SELECT_FIELDS,
     });
+
+    console.log(`[login-debug] Found user:`, JSON.stringify(user, null, 2));
 
     // Check if user exists and is active
     if (!user || !user.isActive) {
@@ -107,6 +103,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Return response (excluding password)
     const { password: _, ...userWithoutPassword } = user;
+
+    console.log(`[login-debug] User without password:`, JSON.stringify(userWithoutPassword, null, 2));
 
     return res.status(200).json({
       token: accessToken,

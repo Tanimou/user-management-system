@@ -1,216 +1,209 @@
 import type { VercelResponse } from '@vercel/node';
-import {
-  hashPassword,
-  requireAuth,
-  requireRole,
-  setCORSHeaders,
-  setSecurityHeaders,
-  type AuthenticatedRequest,
-} from '../lib/auth.js';
+import { logUserCreation } from '../lib/audit-logger.js';
+import { hashPassword } from '../lib/auth.js';
+import { 
+  withCORS, 
+  withErrorHandling, 
+  withAuth, 
+  withAdminRole,
+  validateBody,
+  validateQuery,
+  type AuthenticatedRequest 
+} from '../lib/middleware/index.js';
 import prisma from '../lib/prisma.js';
+import { createUserSchema, getUsersSchema } from '../lib/schemas/user.js';
+
+// GET /api/users - List users (authenticated users can read)
+const getUsersHandler = withCORS(
+  withErrorHandling(
+    withAuth(
+      validateQuery(getUsersSchema)(
+        async (req: AuthenticatedRequest, res: VercelResponse) => {
+          await handleGetUsers(req, res);
+        }
+      )
+    )
+  )
+);
+
+// POST /api/users - Create user (admin only)
+const createUserHandler = withCORS(
+  withErrorHandling(
+    withAuth(
+      withAdminRole(
+        validateBody(createUserSchema)(
+          async (req: AuthenticatedRequest, res: VercelResponse) => {
+            await handleCreateUser(req, res);
+          }
+        )
+      )
+    )
+  )
+);
 
 export default async function handler(req: AuthenticatedRequest, res: VercelResponse) {
-  // Set CORS and security headers
-  setCORSHeaders(res);
-  setSecurityHeaders(res);
-
-  // Handle preflight OPTIONS request
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  // Authenticate user for all requests
-  const isAuthenticated = await requireAuth(req, res);
-  if (!isAuthenticated) return;
-
   if (req.method === 'GET') {
-    return handleGetUsers(req, res);
+    await getUsersHandler(req, res);
   } else if (req.method === 'POST') {
-    return handleCreateUser(req, res);
+    await createUserHandler(req, res);
   } else {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
   }
 }
 
-async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse) {
-  try {
-    const {
-      page = '1',
-      size = '10',
-      search = '',
-      active,
-      orderBy = 'createdAt',
-      order = 'desc',
-    } = req.query;
+async function handleGetUsers(req: AuthenticatedRequest, res: VercelResponse): Promise<void> {
+  // Query parameters are already validated by middleware
+  const { page, size, search, active, role, createdFrom, createdTo, sort, order } = req.query as any;
 
-    // Parse and validate pagination parameters
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
-    const pageSize = Math.min(50, Math.max(1, parseInt(size as string) || 10));
-    const skip = (pageNum - 1) * pageSize;
+  const where: any = {};
 
-    // Build where clause
-    const where: any = {};
+  // Handle search (OR on name and email)
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ];
+  }
 
-    // Handle search (OR on name and email)
-    if (search && typeof search === 'string') {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ];
+  // Handle active filter
+  if (active !== undefined) {
+    where.isActive = active;
+  }
+
+  // Handle role filter
+  if (role && typeof role === 'string') {
+    const validRoles = ['user', 'admin'];
+    if (validRoles.includes(role)) {
+      where.roles = { has: role };
     }
+  }
 
-    // Handle active filter
-    if (active !== undefined) {
-      where.isActive = active === 'true';
-    }
+  // Handle date range filtering
+  const createdAtFilter: any = {};
+  if (createdFrom && typeof createdFrom === 'object' && createdFrom instanceof Date) {
+    createdAtFilter.gte = createdFrom;
+  }
+  if (createdTo && typeof createdTo === 'object' && createdTo instanceof Date) {
+    // Set to end of day for the "to" date
+    const toDate = new Date(createdTo);
+    toDate.setHours(23, 59, 59, 999);
+    createdAtFilter.lte = toDate;
+  }
+  if (Object.keys(createdAtFilter).length > 0) {
+    where.createdAt = createdAtFilter;
+  }
 
-    // Handle sorting
-    const validOrderBy = ['name', 'email', 'createdAt'];
-    const validOrder = ['asc', 'desc'];
+  // Get total count
+  const total = await prisma.user.count({ where });
+  const skip = (page - 1) * size;
 
-    const sortField = validOrderBy.includes(orderBy as string) ? (orderBy as string) : 'createdAt';
-    const sortOrder = validOrder.includes(order as string) ? (order as string) : 'desc';
+  // Get users with pagination and sorting
+  const users = await prisma.user.findMany({
+    where,
+    skip,
+    take: size,
+    orderBy: { [sort]: order },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      roles: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+      deletedAt: true,
+      avatarUrl: true,
+    },
+  });
 
-    // Execute queries
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-          avatarUrl: true,
-        },
-        orderBy: { [sortField]: sortOrder },
-        skip,
-        take: pageSize,
-      }),
-      prisma.user.count({ where }),
-    ]);
+  const totalPages = Math.ceil(total / size) || 1;
+  const startItem = total === 0 ? 0 : skip + 1;
+  const endItem = Math.min(skip + size, total);
 
-    const totalPages = Math.ceil(total / pageSize);
+  res.status(200).json({
+    data: users,
+    pagination: {
+      page,
+      size,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+      startItem,
+      endItem,
+    },
+  });
+}
 
-    return res.status(200).json({
-      data: users,
-      pagination: {
-        page: pageNum,
-        size: pageSize,
-        total,
-        totalPages,
-        hasNext: pageNum < totalPages,
-        hasPrev: pageNum > 1,
+async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse): Promise<void> {
+  // Body is already validated by middleware, admin role is already checked
+  const { name, email, password, roles } = req.body;
+
+  // Check if user already exists
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser && existingUser.isActive) {
+    res.status(409).json({ error: 'User with this email already exists' });
+    return;
+  }
+
+  // Hash password
+  const hashedPassword = await hashPassword(password);
+
+  // Create user (or reactivate if soft-deleted)
+  const userData = {
+    name,
+    email,
+    password: hashedPassword,
+    roles,
+    isActive: true,
+    deletedAt: null,
+    updatedAt: new Date(),
+  };
+
+  let user;
+  if (existingUser && !existingUser.isActive) {
+    // Reactivate soft-deleted user
+    user = await prisma.user.update({
+      where: { id: existingUser.id },
+      data: userData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+        avatarUrl: true,
       },
     });
-  } catch (error) {
-    console.error('Get users error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-}
-
-async function handleCreateUser(req: AuthenticatedRequest, res: VercelResponse) {
-  try {
-    // Check if user has admin role
-    if (!requireRole(req.user, ['admin'])) {
-      return res.status(403).json({ error: 'Admin role required' });
-    }
-
-    const { name, email, password, roles = ['user'] } = req.body;
-
-    // Validate input
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
-    }
-
-    if (typeof name !== 'string' || name.length > 120) {
-      return res.status(400).json({ error: 'Name must be a string with max 120 characters' });
-    }
-
-    if (typeof email !== 'string' || email.length > 180) {
-      return res.status(400).json({ error: 'Email must be a string with max 180 characters' });
-    }
-
-    if (typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
-    }
-
-    if (!Array.isArray(roles) || !roles.includes('user')) {
-      return res.status(400).json({ error: 'Roles must be an array containing at least "user"' });
-    }
-
-    // Normalize email
-    const normalizedEmail = email.toLowerCase().trim();
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+  } else {
+    // Create new user
+    user = await prisma.user.create({
+      data: userData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+        avatarUrl: true,
+      },
     });
-
-    if (existingUser && existingUser.isActive) {
-      return res.status(409).json({ error: 'User with this email already exists' });
-    }
-
-    // Hash password
-    const hashedPassword = await hashPassword(password);
-
-    // Create user (or reactivate if soft-deleted)
-    const userData = {
-      name: name.trim(),
-      email: normalizedEmail,
-      password: hashedPassword,
-      roles,
-      isActive: true,
-      updatedAt: new Date(),
-    };
-
-    let user;
-    if (existingUser && !existingUser.isActive) {
-      // Reactivate soft-deleted user
-      user = await prisma.user.update({
-        where: { id: existingUser.id },
-        data: userData,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-          avatarUrl: true,
-        },
-      });
-    } else {
-      // Create new user
-      user = await prisma.user.create({
-        data: userData,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-          avatarUrl: true,
-        },
-      });
-    }
-
-    return res.status(201).json({
-      message: 'User created successfully',
-      data: user,
-    });
-  } catch (error) {
-    console.error('Create user error:', error);
-
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      return res.status(409).json({ error: 'User with this email already exists' });
-    }
-
-    return res.status(500).json({ error: 'Internal server error' });
   }
+
+  // Log user creation for audit trail
+  await logUserCreation(req, user.id, { name: user.name, email: user.email, roles: user.roles });
+
+  res.status(201).json({
+    message: 'User created successfully',
+    data: user,
+  });
 }
