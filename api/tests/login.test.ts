@@ -6,7 +6,29 @@ vi.mock('../lib/prisma', () => ({
   default: {
     user: {
       findUnique: vi.fn(),
+      update: vi.fn(),
     }
+  },
+  USER_SELECT_FIELDS: {
+    id: true,
+    name: true,
+    email: true,
+    roles: true,
+    isActive: true,
+    createdAt: true,
+    updatedAt: true,
+    avatarUrl: true,
+  },
+  USER_AUTH_SELECT_FIELDS: {
+    id: true,
+    name: true,
+    email: true,
+    password: true,
+    roles: true,
+    isActive: true,
+    createdAt: true,
+    updatedAt: true,
+    avatarUrl: true,
   }
 }));
 
@@ -52,7 +74,7 @@ describe('Login API', () => {
     const req = createMockRequest('POST', {}, {
       body: {
         email: 'john@example.com',
-        password: 'validpassword123'
+        password: 'ValidPassword123!'
       }
     });
     const res = createMockResponse();
@@ -78,7 +100,7 @@ describe('Login API', () => {
     const req = createMockRequest('POST', {}, {
       body: {
         email: 'nonexistent@example.com',
-        password: 'somepassword'
+        password: 'ValidPassword123!'
       }
     });
     const res = createMockResponse();
@@ -106,7 +128,11 @@ describe('Login API', () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
-      error: 'Password must be at least 8 characters long'
+      error: 'Password does not meet policy requirements',
+      details: expect.arrayContaining([
+        'Password must be at least 8 characters long'
+      ]),
+      code: 'INVALID_PASSWORD_POLICY'
     });
   });
 
@@ -117,7 +143,7 @@ describe('Login API', () => {
     const req = createMockRequest('POST', {}, {
       body: {
         email: 'user@example.com',
-        password: 'validpassword123'
+        password: 'ValidPassword123!'
       }
     });
     const res = createMockResponse();
@@ -137,7 +163,7 @@ describe('Login API', () => {
     const req = createMockRequest('POST', {}, {
       body: {
         email: 'JOHN@EXAMPLE.COM', // Uppercase email
-        password: 'validpassword123'
+        password: 'ValidPassword123!'
       }
     });
     const res = createMockResponse();
@@ -162,7 +188,7 @@ describe('Login API', () => {
     const req = createMockRequest('POST', {}, {
       body: {
         email: 'john@example.com',
-        password: 'validpassword123'
+        password: 'ValidPassword123!'
       }
     });
     const res = createMockResponse();
