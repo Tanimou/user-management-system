@@ -1,5 +1,5 @@
+import type { VercelResponse } from '@vercel/node';
 import { vi } from 'vitest';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { AuthenticatedRequest } from '../../lib/auth';
 
 export function createMockRequest(
@@ -11,10 +11,10 @@ export function createMockRequest(
   return {
     method,
     query: cookies ? {} : queryOrCookies,
-    headers: {},
+    headers: additional.headers || {},
     body: additional.body || {},
     cookies: cookies || (method === 'POST' ? queryOrCookies : {}),
-    ...additional
+    ...additional,
   } as AuthenticatedRequest;
 }
 
@@ -25,7 +25,7 @@ export function createMockResponse(): VercelResponse {
     end: vi.fn().mockReturnThis(),
     setHeader: vi.fn().mockReturnThis(),
   } as any;
-  
+
   return res;
 }
 
@@ -41,11 +41,13 @@ export function createMockUser(
     id,
     name,
     email,
+    password: 'hashed-password', // Add password field for Prisma compatibility
     roles,
     isActive,
     createdAt: new Date(),
     updatedAt: new Date(),
-    avatarUrl: avatarUrl || null
+    deletedAt: null, // Add deletedAt field for soft delete compatibility
+    avatarUrl: avatarUrl || null,
   };
 }
 
@@ -57,6 +59,6 @@ export function createMockJWTPayload(
   return {
     userId,
     email,
-    roles
+    roles,
   };
 }

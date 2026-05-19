@@ -1,18 +1,12 @@
 {
+  "version": 2,
+  "buildCommand": "cd web && npm run build",
+  "outputDirectory": "web/dist",
   "functions": {
     "api/**/*.ts": {
-      "runtime": "@vercel/node@3.0.12",
-      "memory": 1024,
-      "maxDuration": 30
+      "maxDuration": 10
     }
   },
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  },
-  "buildCommand": "npm run build",
-  "outputDirectory": "web/dist",
   "headers": [
     {
       "source": "/api/(.*)",
@@ -96,7 +90,7 @@
       "destination": "/api/health"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api).*)",
       "destination": "/web/dist/$1"
     }
   ]

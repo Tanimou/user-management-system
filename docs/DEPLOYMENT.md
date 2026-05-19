@@ -32,7 +32,7 @@ Set these in your Vercel project dashboard or via CLI:
 vercel env add DATABASE_URL
 # Enter your production PostgreSQL connection string
 
-vercel env add JWT_SECRET  
+vercel env add JWT_ACCESS_SECRET  
 # Enter a strong secret (min 256 bits)
 
 vercel env add FRONTEND_ORIGIN

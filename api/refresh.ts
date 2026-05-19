@@ -9,7 +9,7 @@ import {
   verifyRefreshToken,
   type JWTPayload,
 } from './lib/auth.js';
-import prisma from './lib/prisma.js';
+import prisma, { USER_SELECT_FIELDS } from './lib/prisma.js';
 import { createAuthRateLimit } from './lib/rate-limiter.js';
 import { 
   blacklistRefreshToken, 
@@ -80,16 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Find user and verify they're still active
       const user = await prisma.user.findUnique({
         where: { id: payload.userId },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-          avatarUrl: true,
-        },
+        select: USER_SELECT_FIELDS,
       });
 
       if (!user || !user.isActive) {
