@@ -6,31 +6,38 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // For migrations in serverless environments
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(120)
-  email     String   @unique @db.VarChar(180)
-  password  String
-  roles     String[] @default(["user"])
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  avatarUrl String?
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(120)
+  email     String    @unique @db.VarChar(180)
+  password  String    @db.VarChar(255)
+  roles     String[]  @default(["user"])
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  avatarUrl String?   @db.VarChar(500)
 
   auditLogs AuditLog[]
 
   @@map("users")
+  @@index([email])
+  @@index([isActive])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@index([isActive, deletedAt])
 }
 
 model AuditLog {
   id        Int      @id @default(autoincrement())
   actorId   Int?
-  action    String
-  entity    String
+  action    String   @db.VarChar(50)
+  entity    String   @db.VarChar(50)
   entityId  Int?
   payload   Json?
   createdAt DateTime @default(now())
@@ -38,4 +45,7 @@ model AuditLog {
   actor User? @relation(fields: [actorId], references: [id])
 
   @@map("audit_logs")
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([createdAt])
 }
